@@ -1,0 +1,423 @@
+#!/bin/bash
+
+ME=${0##*/}
+
+        ROOT_DIR=""
+   LIVE_BOOT_DIR="/live/boot-dev/antiX"
+        BOOT_DIR="/boot"
+ DEFAULT_VMLINUZ="vmlinuz"
+ DEFAULT_INITRD="initrd.gz"
+        OLD_EXT=".old"
+       PREV_EXT=".prev"
+
+       BZ2_OPTS="-c -9"
+        GZ_OPTS="-c -9"
+        LZ_OPTS="-c -9"
+        XZ_OPTS="-c -z --format=lzma"
+
+      CPIO_OPTS="-o -H newc --owner root:root --quiet"
+
+        WORK_DIR="/tmp/$ME"
+       LOCK_FILE="/run/lock/$ME"
+    THE_LOG_FILE="/var/log/$ME.log"
+    THE_ERR_FILE="/var/log/$ME.errors"
+        LOG_FILE="/dev/null"
+        ERR_FILE="/dev/null"
+
+        ALL_CMDS="rollback all unpack copy repack install"
+       ALL_FORCE="all,rollback,flock,clear,missing-mod,compress"
+
+  CURRENT_KERNEL=$(uname -r)
+           PATH="$(dirname $(readlink -f $0)):/usr/local/share/$ME/bin:$PATH"
+
+usage() {
+    local ret=${1:-0}
+
+cat<<Usage
+Usage: $ME [options] [command]
+Update the kernel on a running antiX or MX live-usb.  The new
+kernel must already be installed.  If the name (uname -r) of the new
+kernel is not give then you will be prompted for it from a menu.
+
+Commands:
+   rollback    Undo changes
+   all         All commands below
+   unpack      Unpack the old initrd
+   copy        Copy kernel modules into initrd
+   repack      Repack the new initrd
+   install     Copy new initrd and vmlinuz to the live boot directory
+
+Options:
+  -a --auto             Never ask questions.  Always assume the safe answer
+  -b --boot-dir=<dir>   The directory to find kernels ($BOOT_DIR)
+  -f --force=XXXX       Force the options specfied:
+                            flock:  ignore missing flock program
+                            clear:  remove previous initrd directory
+                      missing-mod:  ignore missing module directory in the initrd
+                         compress:  use gzip instead of unknown compression
+                         rollback:  always rollback if we've previously upgraded
+
+  -h --help             Show this usage
+  -i --initrd=<name>    Name of initrd file ($DEFAULT_INITRD)
+  -k --kernel=<kernel>  The name (uname -r) of the new kernel
+  -K --keep-old         Keep the old module directory in the initrd
+  -L --live-dir=<dir>   The live boot directory ($LIVE_BOOT_DIR)
+  -p --pretend          Don't run most commands, just show them
+  -P --pause=<list>     Pause after certain stages of processing:
+                            unpack
+                            copy
+                            repack
+                            install
+
+  -q --quiet            Print less
+  -r --root-dir=<dir>   Root directory where modules and kernel are found
+  -v --verbose          Print more, show commands when run
+
+Notes:
+  - short options stack. Example: -pq instead of -p -q
+  - options can be intermingled with commands and parameters
+Usage
+    exit $ret
+}
+
+eval_argument() {
+    local arg=$1 val=$2
+    case $arg in
+              -auto|a)  AUTO_MODE=true                  ;;
+          -boot-dir|b)  CMD_BOOT_DIR=$val               ;;
+          -boot-dir=*)  CMD_BOOT_DIR=$val               ;;
+             -force|f)  FORCE="$FORCE,$val"             ;;
+             -force=*)  FORCE="$FORCE,$val"             ;;
+              -help|h)  usage                           ;;
+            -kernel|k)  NEW_KERNEL=$val                 ;;
+            -kernel=*)  NEW_KERNEL=$val                 ;;
+          -keep-old|K)  KEEP_OLD=true                   ;;
+          -live-dir|L)  LIVE_BOOT_DIR=$val              ;;
+          -live-dir=*)  LIVE_BOOT_DIR=$val              ;;
+           -pretend|p)  PRETEND=true ; BE_VERBOSE=true  ;;
+             -pause|P)  PAUSE="$PAUSE,$val"             ;;
+             -pause=*)  PAUSE="$PAUSE,$val"             ;;
+             -quiet|q)  QUIET=true                      ;;
+          -root-dir|r)  CMD_ROOT_DIR=$val               ;;
+          -root-dir=*)  CMD_ROOT_DIR=$val               ;;
+           -verbose|v)  BE_VERBOSE=true                 ;;
+                    *)  fatal "Unknown parameter %s" "-$arg" ;;
+    esac
+}
+
+takes_param() {
+    case $1 in
+        -boot-dir|b) return 0 ;;
+           -force|f) return 0 ;;
+          -kernel|k) return 0 ;;
+        -live-dir|L) return 0 ;;
+        -root-dir|r) return 0 ;;
+    esac
+    return 1
+}
+
+main() {
+    local SHIFT SHORT_STACK="abfhkKLpPqrv"
+    local BE_VERBOSE
+
+    local orig_args="$*"
+
+    [ $# -eq 0 ] && usage
+
+    EXIT_NUM=33  # Reading cmdline parameters
+    # This loop allows complete intermingling of filenames and options
+    local opt_cnt=0
+    while [ $# -gt 0 ]; do
+        read_params "$@"
+        shift $SHIFT
+
+        while [ $# -gt 0 -a ${#1} -gt 0 -a -n "${1##-*}" ]; do
+            case $opt_cnt in
+                *) CMDS="$CMDS $1" ;;
+            esac
+            shift
+            opt_cnt=$((opt_cnt + 1))
+        done
+    done
+
+    if [ ${#CMD_ROOT_DIR} -gt 0 ]; then
+        ROOT_DIR=$CMD_ROOT_DIR
+        BOOT_DIR=$CMD_ROOT_DIR/boot
+    fi
+
+    BOOT_DIR=${CMD_BOOT_DIR:-$BOOT_DIR}
+
+    echo "boot dir: $BOOT_DIR"
+    #[ $opt_cnt -ne 1 ] && fatal 011 "Expected one command line argument"
+
+    [ "$PRETEND" ] && msg "PRETEND MODE ENABLED"
+
+    EXIT_NUM=100
+    [ $UID -eq 0 ] || fatal 101 "This script must be run as root"
+
+    need_prog vmlinuz-version copy-initrd-modules
+
+    trap clean_up EXIT
+
+    do_flock $LOCK_FILE $ME
+
+    check_cmds CMDS "$ALL_CMDS"
+
+    check_force "$FORCE" "$ALL_FORCE"
+
+
+    if echo "$CMDS" | egrep -q "(^| )rollback( |$)"; then
+        do_rollback "$LIVE_BOOT_DIR" "$DEFAULT_VMLINUZ" "$DEFAULT_INITRD"
+        exit 0
+    fi
+
+    [ "$CLEAR_WORK" ] && rm -rf "$WORK_DIR"
+    mkdir -p $WORK_DIR || fatal 120 "Could not make a work directory under /tmp"
+
+    #start_log "$orig_args"
+
+    if [ -z "$NEW_KERNEL" ]; then
+        fatal "You must specify a new kernel (for now)"
+    fi
+
+    local new_mod_dir="$ROOT_DIR/lib/modules/$NEW_KERNEL"
+    local current_vmlinuz=$(vmlinuz-version --current $LIVE_BOOT_DIR/*)
+    local base_vmlinuz=$(basename "$current_vmlinuz")
+
+    force overwrite || [ -n "${base_vmlinuz##*.old}" ] || yes_NO_fatal "overwrite" \
+            "$(printf "Do you want to overwrite the backup '%s' file" "$base_vmlinuz")" \
+            "Use --force=overwrite to always overwrite backups" \
+            "The current vmlinuz file '%s' looks like a backup file" "$base_vmlinuz"
+
+    local new_kernel_file=$(vmlinuz-version -Nnr -d=:: "$BOOT_DIR"/* | sed -n "s/^$NEW_KERNEL:://p")
+
+    local new_kernel_name=$(basename "$new_kernel_file")
+
+    local info_fmt="%25s:$white %s"
+    msg "$info_fmt" "Current kernel version" "$CURRENT_KERNEL"
+    msg "$info_fmt" "New kernel version"     "$NEW_KERNEL"
+    msg "$info_fmt" "Current vmlinuz file"   "$base_vmlinuz"
+    msg "$info_fmt" "New module directory"   "$new_mod_dir"
+    msg "$info_fmt" "New kernel file"        "${new_kernel_file:-????}"
+    msg
+
+    test -e "$LIVE_BOOT_DIR" || fatal "The live boot directory '%s' does not exist"     "$LIVE_BOOT_DIR"
+    test -d "$LIVE_BOOT_DIR" || fatal "The live boot directory '%s' is not a directory" "$LIVE_BOOT_DIR"
+    is_writable "$LIVE_BOOT_DIR" || fatal "The live boot directory '%s' is not writable" "$LVIE_BOOT_DIR"
+
+    test -e "$BOOT_DIR"      || fatal "The boot directory '%s' does not exist"          "$BOOT_DIR"
+    test -d "$BOOT_DIR"      || fatal "The boot directory '%s' is not a directory"      "$BOOT_DIR"
+
+    test -e "$new_mod_dir"   || fatal "The module directory '%s' does not exist"        "$new_mod_dir"
+    test -d "$new_mod_dir"   || fatal "The module directory '%s' is not a directory"    "$new_mod_dir"
+
+    [ ${#new_kernel_file} -gt 0 ] || fatal "Could not find a new kernel file in %s"     "$BOOT_DIR/"
+
+    if [ ${#current_vmlinuz} -eq 0 ]; then
+        warn "Could not find current vmlinuz file.  Assuming it is '%s'" "$DEFAULT_VMLINUZ"
+        current_vmlinuz="$LIVED_BOOT_DIR/$DEFAULT_VMLINUZ"
+    fi
+
+    full_initrd="$LIVE_BOOT_DIR/$DEFAULT_INITRD"
+    test -e "$full_initrd" || fatal "Could not find initrd file: %s" "$full_initrd"
+
+    local initrd_dir=$WORK_DIR/initrd
+    local tmp_initrd_file="$WORK_DIR/$(basename $full_initrd).tmp"
+    local compression_file="$WORK_DIR/compression"
+    local cpio_files="$WORK_DIR/cpio.{in,out}"
+
+    if [ ${#CMDS} -le 0 ]; then
+        echo -e "No command(s) given.  Try 'all'."
+        exit 0
+    fi
+
+    if need unpack; then
+
+        if force clear; then
+            cmd rm -rf "$initrd_dir/../initrd"
+            cmd rm -f "$tmp_initrd_file" $compression_file $cpio_files
+        else
+            test -d "$initrd_dir" && yes_NO_fatal "clear" \
+                "Do you want to delete it now"            \
+                "Use --force=clear to always delete it"   \
+                "Will not over-write an existing initrd directory."
+        fi
+
+        unpack_initrd "$full_initrd" "$initrd_dir"  "$compression_file"
+    fi
+
+    pause unpack
+
+    old_initrd_mods="$initrd_dir/lib/modules/$CURRENT_KERNEL"
+
+    force missing-mod || test -d "$old_initrd_mods" || yes_NO_fatal "missing-mod" \
+        "Something is wrong but this may still work.  Do you want to continue anyway" \
+        "Use --force=missing-mod to ignore this in the future" \
+        "There is no module directory for the current kernel in the initrd"
+
+    [ -z "$KEEP_OLD" ] && test -d "$old_initrd_mods" && cmd rm -rf "$old_initrd_mods"
+
+    need copy && cmd copy-initrd-modules --quiet --from="$ROOT_DIR" --to="$initrd_dir" --kernel="$NEW_KERNEL"
+    pause copy
+
+    need repack && repack_initrd "$initrd_dir" "$tmp_initrd_file"  "$compression_file"
+    pause repack
+
+    if need install; then
+        do_install "$tmp_initrd_file" "$full_initrd"
+        do_install "$new_kernel_file" "$current_vmlinuz"
+    fi
+    pause install
+
+    exit
+
+    my_exit 0
+}
+
+pause() {
+    local where=$1
+}
+
+unpack_initrd() {
+    local file=$1  dir=$2  compression_file=$3
+    local compression=$(file -b "$file" | cut -d" " -f1) 
+
+    local compress args
+    case $compression in
+         gzip) compress="gzip"   ; args="-cd"  ;;
+        bzip2) compress="bzip2"  ; args="-cd"  ;;  
+         lzip) compress="lzip"   ; args="-cd"  ;;
+           XZ) compress="xz"     ; args="-cd"  ;;
+            *) fatal "Don't know how to decompress a '%s' file" "$compression" ;;
+    esac
+    echo "$compress" > $compression_file
+
+    need_prog $compress
+    my_mkdir "$dir"
+
+    local cpio_file="$dir.in"
+    $compress $args "$file" > "$cpio_file" || fatal "The decompression program '%s' failed" "$decomp"
+
+    local unpack archive_type=$(file -b "$cpio_file")
+    case $archive_type in
+        *" cpio archive"*) unpack="cpio" ; args="-idum --quiet" ;;
+         *" tar archive"*) unpack="tar"  ; args="-x"            ;;
+                       *) fatal "unknown initrd archive type '%s'" "$archive_type"
+    esac
+    (cd "$dir" && $unpack $args) < "$cpio_file" || fatal "The %s extraction failed" "$unpack"
+}
+
+repack_initrd() {
+    local dir=$1  file=$2  compression_file=$3
+    local compress
+    read compress 2>/dev/null < $compression_file
+    : ${compress:=gzip}
+
+    local args
+    case $compress in
+         bzip2) args="$BZ2_OPTS" ;;
+          gzip) args="$GZ_OPTS"  ;;
+          lzip) args="$LZ_OPTS"  ;;
+            xz) args="$XZ_OPTS"  ;;
+             *) yes_NO_fatal "compress" \
+               "Do you want to continue on using gzip compression" \
+               "Use --force=compress to skip this question in the future" \
+               "Unknown compression format: %s" "$compression"
+                compress="gzip" ; args="$GZIP_OPTS"  ;;
+    esac
+
+    need_prog $compress
+
+    local cpio_file="$dir.out"
+    (cd "$dir" && find . -depth | cpio $CPIO_OPTS) > $cpio_file \
+        || fatal "Could not create a cpio archive"
+
+    msg "Compressing ..."
+    $compress $args < "$cpio_file" > "$file" || fatal "Compression (%s) failed" $compress
+}
+
+do_install() {
+    local from=$1  dest=$2
+    test -f "$from" || fail "Installation file %s does not exist" "$from"
+
+    if test -e "$dest"; then
+        if [ -n "${dest%%*.old}" ]; then
+            local backup="$dest.old"
+            msg "backing up %s to %s" "$(pq $(basename "$dest"))" "$(pq $(basename "$backup"))"
+            cmd mv "$dest" "$backup"
+        else
+            warn "Overwriting backup"
+        fi
+    else
+        warn "Target file %s does not exist" "$dest"
+    fi
+
+    cmd cp "$from" "$dest"
+}
+
+do_rollback() {
+    local dir=$1  vmlinuz=$2  initrd=$3
+
+    local old_vmlinuz bad_vmlinuz the_vmlinuz f
+    for f in $vmlinuz$OLD_EXT ${vmlinuz}1$OLD_EXT; do
+        test -e $dir/$f || continue
+        msg "Found old vmlinuz file %s" $f
+        old_vmlinuz="$dir/$f"
+        bad_vmlinuz=${old_vmlinuz%%$OLD_EXT}$PREV_EXT
+        the_vmlinuz="$dir/$f"
+        break
+    done
+    [ "$old_vmlinuz" ] || fatal "Could not find old %s file to roll back" $vmlinuz
+
+    local new_initrd="$dir/$initrd$OLD_EXT"
+    local bad_initrd="$dir/$initrd$PREV_EXT"
+    local the_initrd="$dir/$initrd"
+
+    [ "$old_vmlinuz" ] || fatal "Could not find old %s file to roll back" $initrd
+
+    cmd mv "$the_initrd" "$bad_initrd"
+    cmd mv "$old_initrd" "$the_initrd"
+
+    cmd mv "$the_vmlinuz" "$bad_vmlinuz"
+    cmd mv "$old_vmlinuz" "$the_vmlinuz"
+}
+
+my_exit() {
+    local ret=${1:-0}
+
+    if [ "$DEBUG" ]; then
+        echo -n "${green}Press <Enter>$nc_co "
+        read x
+    fi
+
+    Msg "=> cleaning up"
+    exit $ret
+}
+
+start_log() {
+    local args=$1 cmds=${2# }
+
+    LOG_FILE=$THE_LOG_FILE
+    ERR_FILE=$THE_ERR_FILE
+
+    rm -f $ERR_FILE
+
+    cat <<Start_Log >> $LOG_FILE
+---------------------------------------------------------------------
+$ME
+    started: $(date)
+comand line: $args
+
+Start_Log
+}
+
+clean_up() {
+    sync; sync
+    rm -f $LOCK_FILE
+    #rmdir $WORK_DIR
+}
+
+set_colors
+
+main "$@"
+
