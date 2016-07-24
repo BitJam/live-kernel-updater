@@ -5,13 +5,16 @@
 
 #== BEGIN_CONFIG
 
-        ROOT_DIR=""
-   LIVE_BOOT_DIR="/live/boot-dev/antiX"
-        BOOT_DIR="/boot"
+        LIVE_MP="/live/boot-dev"
+        LIVE_DIR="antiX"
+        BOOT_DIR="boot"
+         LINUXFS="linuxfs"
+
  DEFAULT_VMLINUZ="vmlinuz"
  DEFAULT_INITRD="initrd.gz"
         OLD_EXT=".old"
-       PREV_EXT=".prev"
+        BAD_EXT=".bad"
+        NEW_EXT=".new"
 
        BZ2_OPTS="-c -9"
         GZ_OPTS="-c -9"
@@ -56,20 +59,20 @@ Commands:
    install     Copy new initrd and vmlinuz to the live boot directory
 
 Options:
-  -a --auto             Never ask questions.  Always assume the safe answer
-  -b --boot-dir=<dir>   The directory to find kernels ($BOOT_DIR)
+  -a --auto             Non-interactive.  Always assume the safe answer
+  -d --device=<device>  A live-usb to update the kernel on
+                        (instead of on the running live system)
   -f --force=XXXX       Force the options specfied:
                             flock:  ignore missing flock program
                             clear:  remove previous initrd directory
                       missing-mod:  ignore missing module directory in the initrd
                          compress:  use gzip instead of unknown compression
-                         rollback:  always rollback if we've previously upgraded
+                         rollback:  always rollback if we've previously updated
 
   -h --help             Show this usage
   -i --initrd=<name>    Name of initrd file ($DEFAULT_INITRD)
-  -k --kernel=<kernel>  The name (uname -r) of the new kernel
+  -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
-  -L --live-dir=<dir>   The live boot directory ($LIVE_BOOT_DIR)
   -p --pretend          Don't run most commands, just show them
   -P --pause=<list>     Pause after certain stages of processing:
                             unpack
@@ -78,7 +81,6 @@ Options:
                             install
 
   -q --quiet            Print less
-  -r --root-dir=<dir>   Root directory where modules and kernel are found
   -v --verbose          Print more, show commands when run
 
 Notes:
@@ -92,34 +94,32 @@ eval_argument() {
     local arg=$1 val=$2
     case $arg in
               -auto|a)  AUTO_MODE=true                  ;;
-          -boot-dir|b)  CMD_BOOT_DIR=$val               ;;
-          -boot-dir=*)  CMD_BOOT_DIR=$val               ;;
+            -device|d)  DEVICE=$val                     ;;
+            -device=*)  DEVICE=$val                     ;;
              -force|f)  FORCE="$FORCE,$val"             ;;
              -force=*)  FORCE="$FORCE,$val"             ;;
               -help|h)  usage                           ;;
+            -initrd|i)  CMD_INITRD=$val                 ;;
+            -initrd=*)  CMD_INITRD=$val                 ;;
             -kernel|k)  NEW_KERNEL=$val                 ;;
             -kernel=*)  NEW_KERNEL=$val                 ;;
           -keep-old|K)  KEEP_OLD=true                   ;;
-          -live-dir|L)  LIVE_BOOT_DIR=$val              ;;
-          -live-dir=*)  LIVE_BOOT_DIR=$val              ;;
            -pretend|p)  PRETEND=true ; BE_VERBOSE=true  ;;
              -pause|P)  PAUSE="$PAUSE,$val"             ;;
              -pause=*)  PAUSE="$PAUSE,$val"             ;;
              -quiet|q)  QUIET=true                      ;;
-          -root-dir|r)  CMD_ROOT_DIR=$val               ;;
-          -root-dir=*)  CMD_ROOT_DIR=$val               ;;
            -verbose|v)  BE_VERBOSE=true                 ;;
-                    *)  fatal "Unknown parameter %s" "-$arg" ;;
+               *)  fatal "Unknown parameter %s" "-$arg" ;;
     esac
 }
 
 takes_param() {
     case $1 in
-        -boot-dir|b) return 0 ;;
+          -device|d) return 0 ;;
+          -initrd|i) return 0 ;;
            -force|f) return 0 ;;
           -kernel|k) return 0 ;;
-        -live-dir|L) return 0 ;;
-        -root-dir|r) return 0 ;;
+           -pause|p) return 0 ;;
     esac
     return 1
 }
@@ -132,24 +132,13 @@ assign_parameter() {
 }
 
 main() {
-    local SHIFT SHORT_STACK="abfhkKLpPqrv"
+    local SHIFT SHORT_STACK="adfhikKpPqv"
     local BE_VERBOSE
-
     local orig_args="$*"
 
     [ $# -eq 0 ] && usage
 
-    EXIT_NUM=33  # Reading cmdline parameters
-    # This loop allows complete intermingling of filenames and options
-
     read_all_cmdline_mingled "$@"
-
-    if [ ${#CMD_ROOT_DIR} -gt 0 ]; then
-        ROOT_DIR=$CMD_ROOT_DIR
-        BOOT_DIR=$CMD_ROOT_DIR/boot
-    fi
-
-    BOOT_DIR=${CMD_BOOT_DIR:-$BOOT_DIR}
 
     #[ $opt_cnt -ne 1 ] && fatal 011 "Expected one command line argument"
 
@@ -163,27 +152,57 @@ main() {
     trap clean_up EXIT
 
     do_flock $LOCK_FILE $ME
-
     check_cmds CMDS "$ALL_CMDS"
-
     check_force "$FORCE" "$ALL_FORCE"
 
+    #if given_cmd rollback; then
+    #   do_rollback "$LIVE_BOOT_DIR" "$DEFAULT_VMLINUZ" "$DEFAULT_INITRD"
+    #   exit 0
+    #fi
 
-    if echo "$CMDS" | egrep -q "(^| )rollback( |$)"; then
-        do_rollback "$LIVE_BOOT_DIR" "$DEFAULT_VMLINUZ" "$DEFAULT_INITRD"
-        exit 0
-    fi
+    # Not local so we can clean up
+     USB_DIR=$WORK_DIR/usb
+    SQFS_DIR=$WORK_DIR/linux
+
+    local root_dir=$SQFS_DIR
 
     [ "$CLEAR_WORK" ] && rm -rf "$WORK_DIR"
     mkdir -p $WORK_DIR || fatal 120 "Could not make a work directory under /tmp"
 
+    # FIXME
+    local usb_dev dev_type
+    if [ ${#DEVICE} -gt 0 ]; then
+        usb_dev=$(expand_device $DEVICE)
+        [ ${#usb_dev} -gt 0 ] || fatal $"Could not find device %s" "$DEVICE"
+        dev_type=$(lsblk -no type --nodeps $usb_dev)
+        [ "$dev_type" = "part" ] || fatal $"Device %s is not a disk partition" $usb_dev
+
+        my_mount $usb_dev $USB_DIR
+        LIVE_MP=$USB_DIR
+    fi
+
+    # Find the linuxfs file
+    local ext file linuxfs_file full_live_dir=$LIVE_MP/$LIVE_DIR
+    for ext in "$NEW_EXT" ""; do
+        file=$full_live_dir/$LINUXFS$ext
+        test -r $file || continue
+        linuxfs_file=$file
+    done
+
+    [ ${#linuxfs_file} -gt 0 ] \
+        || fatal "Could not find '%s' or '%s' on the live-usb" "$linuxfs$NEW_EXT" "$linuxfs"
+
+    my_mount "$linuxfs" "$root_dir" -t squashfs -o loop,ro
+
     #start_log "$orig_args"
+    ZZZZZZZZZZZZZZZZZZZZZZZZz
+
 
     if [ -z "$NEW_KERNEL" ]; then
         fatal "You must specify a new kernel (for now)"
     fi
 
-    local new_mod_dir="$ROOT_DIR/lib/modules/$NEW_KERNEL"
+    local new_mod_dir="$root_dir/lib/modules/$NEW_KERNEL"
     local current_vmlinuz=$(vmlinuz-version --current $LIVE_BOOT_DIR/*)
     local base_vmlinuz=$(basename "$current_vmlinuz")
 
@@ -260,7 +279,7 @@ main() {
 
     [ -z "$KEEP_OLD" ] && test -d "$old_initrd_mods" && cmd rm -rf "$old_initrd_mods"
 
-    need copy && cmd copy-initrd-modules --quiet --from="$ROOT_DIR" --to="$initrd_dir" --kernel="$NEW_KERNEL"
+    need copy && cmd copy-initrd-modules --quiet --from="$root_dir" --to="$initrd_dir" --kernel="$NEW_KERNEL"
     pause copy
 
     need repack && repack_initrd "$initrd_dir" "$tmp_initrd_file"  "$compression_file"
@@ -417,8 +436,18 @@ Start_Log
 
 clean_up() {
     sync; sync
+    for mp in $USB_DIR $SQFS_DIR; do
+        is_mountpoint $mp && umount -r -l $mp
+        if ! is_mountpoint $mp; then
+            rm -rf $mp
+        else
+            warn "%s remains mounted" "$mp"
+            continue
+        fi
+    done
+    #test -d $WORK_DIR && rmdir $WORK_DIR
+
     rm -f $LOCK_FILE
-    #rmdir $WORK_DIR
 }
 
 load_lib() {
