@@ -2,6 +2,8 @@
 
 ME=${0##*/}
 
+#== BEGIN_CONFIG
+
         ROOT_DIR=""
    LIVE_BOOT_DIR="/live/boot-dev/antiX"
         BOOT_DIR="/boot"
@@ -19,6 +21,8 @@ ME=${0##*/}
 
       SHELL_LIB="shell-utils.bash"
        LIB_PATH=". ../shell-utils /usr/local/lib/shell-utils"
+
+#== END_CONFIG
 
         WORK_DIR="/tmp/$ME"
        LOCK_FILE="/run/lock/$ME"
