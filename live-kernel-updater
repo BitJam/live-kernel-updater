@@ -302,12 +302,12 @@ pause() {
 
 unpack_initrd() {
     local file=$1  dir=$2  compression_file=$3
-    local compression=$(file -b "$file" | cut -d" " -f1) 
+    local compression=$(file -b "$file" | cut -d" " -f1)
 
     local compress args
     case $compression in
          gzip) compress="gzip"   ; args="-cd"  ;;
-        bzip2) compress="bzip2"  ; args="-cd"  ;;  
+        bzip2) compress="bzip2"  ; args="-cd"  ;;
          lzip) compress="lzip"   ; args="-cd"  ;;
            XZ) compress="xz"     ; args="-cd"  ;;
             *) fatal "Don't know how to decompress a '%s' file" "$compression" ;;
