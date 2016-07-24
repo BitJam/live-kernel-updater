@@ -151,7 +151,6 @@ main() {
 
     BOOT_DIR=${CMD_BOOT_DIR:-$BOOT_DIR}
 
-    echo "boot dir: $BOOT_DIR"
     #[ $opt_cnt -ne 1 ] && fatal 011 "Expected one command line argument"
 
     [ "$PRETEND" ] && msg "PRETEND MODE ENABLED"
