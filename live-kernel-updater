@@ -191,7 +191,7 @@ main() {
     local current_vmlinuz=$(vmlinuz-version --current $LIVE_BOOT_DIR/*)
     local base_vmlinuz=$(basename "$current_vmlinuz")
 
-    force overwrite || [ -n "${base_vmlinuz##*.old}" ] || yes_NO_fatal "overwrite" \
+    force rollback || [ -n "${base_vmlinuz##*.old}" ] || yes_NO_fatal "rollback" \
             "$(printf "Do you want to overwrite the backup '%s' file" "$base_vmlinuz")" \
             "Use --force=overwrite to always overwrite backups" \
             "The current vmlinuz file '%s' looks like a backup file" "$base_vmlinuz"
