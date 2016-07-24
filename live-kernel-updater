@@ -36,7 +36,7 @@
        ALL_FORCE="all,rollback,flock,clear,missing-mod,compress"
 
   CURRENT_KERNEL=$(uname -r)
-           PATH="$(dirname $(readlink -f $0)):/usr/local/share/$ME/bin:$PATH"
+            PATH="$MY_DIR:/usr/local/share/$ME/bin:$PATH"
 
 usage() {
     local ret=${1:-0}
