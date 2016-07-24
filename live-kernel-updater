@@ -17,6 +17,10 @@ ME=${0##*/}
 
       CPIO_OPTS="-o -H newc --owner root:root --quiet"
 
+      SHELL_LIB="shell-utils.bash"
+       LIB_PATH=". /usr/local/lib/shell-utils"
+
+
         WORK_DIR="/tmp/$ME"
        LOCK_FILE="/run/lock/$ME"
     THE_LOG_FILE="/var/log/$ME.log"
@@ -416,6 +420,30 @@ clean_up() {
     rm -f $LOCK_FILE
     #rmdir $WORK_DIR
 }
+
+load_lib() {
+    local file=$1
+    shift
+
+    local dir lib found
+    for dir; do
+        lib=$dir/$file
+        test -e $lib || continue
+        test -r $lib || return 1
+        . $lib || return 2
+        found=1
+        break
+    done
+    [ "$found" ]
+    return $?
+}
+
+#===== Start Here =============================================================
+if ! load_lib "$SHELL_LIB"  $LIB_PATH; then
+    printf "Could not find library '%s' on path '%s']n" "$SHELL_LIB" "$LIB_PATH" >&2
+    echo "This is a fatal error" >&2
+    exit 17
+fi
 
 set_colors
 
