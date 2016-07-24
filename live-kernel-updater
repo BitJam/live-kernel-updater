@@ -18,8 +18,7 @@ ME=${0##*/}
       CPIO_OPTS="-o -H newc --owner root:root --quiet"
 
       SHELL_LIB="shell-utils.bash"
-       LIB_PATH=". /usr/local/lib/shell-utils"
-
+       LIB_PATH=". ../shell-utils /usr/local/lib/shell-utils"
 
         WORK_DIR="/tmp/$ME"
        LOCK_FILE="/run/lock/$ME"
