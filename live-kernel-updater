@@ -5,30 +5,37 @@
 
 #== BEGIN_CONFIG
 
-        LIVE_MP="/live/boot-dev"
+         LIVE_MP="/live/boot-dev"
         LIVE_DIR="antiX"
         BOOT_DIR="boot"
-         LINUXFS="linuxfs"
 
- DEFAULT_VMLINUZ="vmlinuz"
- DEFAULT_INITRD="initrd.gz"
-        OLD_EXT=".old"
-        BAD_EXT=".bad"
-        NEW_EXT=".new"
+    LINUXFS_FILE="linuxfs"
+    VMLINUZ_FILE="vmlinuz"
+  VMLINUZ_2_FILE="vmlinuz1"
+     INITRD_FILE="initrd.gz"
 
-       BZ2_OPTS="-c -9"
-        GZ_OPTS="-c -9"
-        LZ_OPTS="-c -9"
-        XZ_OPTS="-c -z --format=lzma"
+        # for kernel and initrd.gz files
+       KOLD_EXT=".kold"
+       KBAD_EXT=".kbad"
+        MD5_EXT=".md5"
 
-      CPIO_OPTS="-o -H newc --owner root:root --quiet"
+        # For linuxfs file (right after a remaster)
+         NEW_EXT=".new"
 
-      SHELL_LIB="cli-shell-utils.bash"
-       LIB_PATH="/usr/local/lib/shell-utils"
+        BZ2_OPTS="-c -9"
+         GZ_OPTS="-c -9"
+         LZ_OPTS="-c -9"
+         XZ_OPTS="-c -z --format=lzma"
+
+       CPIO_OPTS="-o -H newc --owner root:root --quiet"
+
+       SHELL_LIB="cli-shell-utils.bash"
+        LIB_PATH="/usr/local/lib/shell-utils"
 
 #== END_CONFIG
 
-        WORK_DIR="/tmp/$ME"
+        WORK_DIR="/run/$ME"
+            FIFO="/run/$ME/fifo"
        LOCK_FILE="/run/lock/$ME"
     THE_LOG_FILE="/var/log/$ME.log"
     THE_ERR_FILE="/var/log/$ME.errors"
@@ -37,8 +44,8 @@
 
         ALL_CMDS="rollback all unpack copy repack install"
        ALL_FORCE="all,rollback,flock,clear,missing-mod,compress"
+       ALL_PAUSE="all,fifo,mount,unpack,copy,repack,clean"
 
-  CURRENT_KERNEL=$(uname -r)
             PATH="$MY_DIR:/usr/local/share/$ME/bin:$PATH"
 
 usage() {
@@ -60,21 +67,21 @@ Commands:
 
 Options:
   -a --auto             Non-interactive.  Always assume the safe answer
+  -D --debug            Pause before cleaning up
   -d --device=<device>  A live-usb to update the kernel on
                         (instead of on the running live system)
   -f --force=XXXX       Force the options specfied:
-                            flock:  ignore missing flock program
-                            clear:  remove previous initrd directory
-                      missing-mod:  ignore missing module directory in the initrd
-                         compress:  use gzip instead of unknown compression
-                         rollback:  always rollback if we've previously updated
-
+                                flock:  ignore missing flock program
+                                clear:  remove previous initrd directory
+                             compress:  use gzip instead of unknown compression
+                             rollback:  always rollback if we've previously updated
   -h --help             Show this usage
-  -i --initrd=<name>    Name of initrd file ($DEFAULT_INITRD)
+  -i --initrd=<name>    Name of initrd file ($INITRD_FILE)
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
   -p --pretend          Don't run most commands, just show them
   -P --pause=<list>     Pause after certain stages of processing:
+                            mount
                             unpack
                             copy
                             repack
@@ -96,17 +103,18 @@ eval_argument() {
               -auto|a)  AUTO_MODE=true                  ;;
             -device|d)  DEVICE=$val                     ;;
             -device=*)  DEVICE=$val                     ;;
-             -force|f)  FORCE="$FORCE,$val"             ;;
-             -force=*)  FORCE="$FORCE,$val"             ;;
-              -help|h)  usage                           ;;
+             -debug|D)  DEBUG=true                      ;;
+             -force|f)  FORCE="$FORCE${FORCE:+,}$val"   ;;
+             -force=*)  FORCE="$FORCE${FORCE:+,}$val"   ;;
+#               -fifo)  FIFO_MODE=true                  ;;
             -initrd|i)  CMD_INITRD=$val                 ;;
             -initrd=*)  CMD_INITRD=$val                 ;;
             -kernel|k)  NEW_KERNEL=$val                 ;;
             -kernel=*)  NEW_KERNEL=$val                 ;;
           -keep-old|K)  KEEP_OLD=true                   ;;
            -pretend|p)  PRETEND=true ; BE_VERBOSE=true  ;;
-             -pause|P)  PAUSE="$PAUSE,$val"             ;;
-             -pause=*)  PAUSE="$PAUSE,$val"             ;;
+             -pause|P)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
+             -pause=*)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
              -quiet|q)  QUIET=true                      ;;
            -verbose|v)  BE_VERBOSE=true                 ;;
                *)  fatal "Unknown parameter %s" "-$arg" ;;
@@ -119,7 +127,7 @@ takes_param() {
           -initrd|i) return 0 ;;
            -force|f) return 0 ;;
           -kernel|k) return 0 ;;
-           -pause|p) return 0 ;;
+           -pause|P) return 0 ;;
     esac
     return 1
 }
@@ -127,12 +135,12 @@ takes_param() {
 assign_parameter() {
     local cnt=$1 param=$2
    case $cnt in
-        *) CMDS="$CMDS $param" ;;
+        *) CMDS="$CMDS${CMD:+ }$param" ;;
     esac
 }
 
 main() {
-    local SHIFT SHORT_STACK="adfhikKpPqv"
+    local SHIFT SHORT_STACK="adDfhikKpPqv"
     local BE_VERBOSE
     local orig_args="$*"
 
@@ -142,8 +150,6 @@ main() {
 
     #[ $opt_cnt -ne 1 ] && fatal 011 "Expected one command line argument"
 
-    [ "$PRETEND" ] && msg "PRETEND MODE ENABLED"
-
     EXIT_NUM=100
     [ $UID -eq 0 ] || fatal 101 "This script must be run as root"
 
@@ -152,95 +158,182 @@ main() {
     trap clean_up EXIT
 
     do_flock $LOCK_FILE $ME
-    check_cmds CMDS "$ALL_CMDS"
-    check_force "$FORCE" "$ALL_FORCE"
+    check_cmds  CMDS  "$ALL_CMDS"
+    check_force FORCE "$ALL_FORCE"
+    check_pause PAUSE "$ALL_PAUSE"
 
-    #if given_cmd rollback; then
-    #   do_rollback "$LIVE_BOOT_DIR" "$DEFAULT_VMLINUZ" "$DEFAULT_INITRD"
-    #   exit 0
-    #fi
+    #[ "$FIFO_MODE" -a "$AUTO_MODE" ] && fatal "Cannot select both %s and %s" "--fifo" "--auto"
 
-    # Not local so we can clean up
+    [ "$PRETEND" ] && Msg "PRETEND MODE ENABLED"
+
      USB_DIR=$WORK_DIR/usb
     SQFS_DIR=$WORK_DIR/linux
 
     local root_dir=$SQFS_DIR
 
+    # FIXME When to clear?  When to clean?
     [ "$CLEAR_WORK" ] && rm -rf "$WORK_DIR"
     mkdir -p $WORK_DIR || fatal 120 "Could not make a work directory under /tmp"
 
-    # FIXME
-    local usb_dev dev_type
-    if [ ${#DEVICE} -gt 0 ]; then
+    # Are we going to update a running live system or an plugged in live-usb?
+    local usb_dev dev_type live_mp
+
+    #----- RUNNING LIVE -------------------------------------------------------
+    if its_alive && [ ${#DEVICE} -eq 0 ]; then
+        UPDATE_LIVE=true
+        live_mp=$LIVE_MP
+
+    #----- LIVE-USB -----------------------------------------------------------
+    else
+        if [ ${#DEVICE} -eq 0 ]; then
+            fatal "Must specify a device if not running live (for now)"
+        fi
+
         usb_dev=$(expand_device $DEVICE)
-        [ ${#usb_dev} -gt 0 ] || fatal $"Could not find device %s" "$DEVICE"
+        fatal_z "$usb_dev" $"Could not find device %s" "$DEVICE"
         dev_type=$(lsblk -no type --nodeps $usb_dev)
         [ "$dev_type" = "part" ] || fatal $"Device %s is not a disk partition" $usb_dev
 
         my_mount $usb_dev $USB_DIR
-        LIVE_MP=$USB_DIR
+        live_mp=$USB_DIR
     fi
 
-    # Find the linuxfs file
-    local ext file linuxfs_file full_live_dir=$LIVE_MP/$LIVE_DIR
+    is_mountpoint "$live_mp" || fatal "Expected '%s' to be a mountpoint" "$live_mp"
+
+    local full_live_dir=$live_mp/${LIVE_DIR#/}
+    check_writable "$full_live_dir" "live boot"
+
+    # Find the linuxfs file (where we get new kernels and modules from)
+    local ext file linuxfs_file
     for ext in "$NEW_EXT" ""; do
-        file=$full_live_dir/$LINUXFS$ext
+        file=$full_live_dir/$LINUXFS_FILE$ext
         test -r $file || continue
         linuxfs_file=$file
+        break
     done
 
-    [ ${#linuxfs_file} -gt 0 ] \
-        || fatal "Could not find '%s' or '%s' on the live-usb" "$linuxfs$NEW_EXT" "$linuxfs"
+    fatal_z "$linuxfs_file" "Could not find '%s' or '%s' on the live-usb" \
+        $(pqh "$LINUXFS_FILE$NEW_EXT") $(pqh "$LINUXFS_FILE")
 
-    my_mount "$linuxfs" "$root_dir" -t squashfs -o loop,ro
-
-    #start_log "$orig_args"
-    ZZZZZZZZZZZZZZZZZZZZZZZZz
-
-
-    if [ -z "$NEW_KERNEL" ]; then
-        fatal "You must specify a new kernel (for now)"
+    local live_remaster
+    if [ -z "${linuxfs_file%%*$NEW_EXT}" ]; then
+        live_remaster=true
+        msg "Found %s file %s" $(pq live-remaster) $(pq $(basename $linuxfs_file))
+    else
+        msg "Found %s file %s" $(pq linuxfs) $(pq $(basename $linuxfs_file))
     fi
 
-    local new_mod_dir="$root_dir/lib/modules/$NEW_KERNEL"
-    local current_vmlinuz=$(vmlinuz-version --current $LIVE_BOOT_DIR/*)
-    local base_vmlinuz=$(basename "$current_vmlinuz")
+    # Fix me?
+    my_mount "$linuxfs_file" "$root_dir" -t squashfs -o loop,ro
+    local full_boot_dir="$root_dir/${BOOT_DIR#/}"
 
-    force rollback || [ -n "${base_vmlinuz##*.old}" ] || yes_NO_fatal "rollback" \
-            "$(printf "Do you want to overwrite the backup '%s' file" "$base_vmlinuz")" \
-            "Use --force=overwrite to always overwrite backups" \
-            "The current vmlinuz file '%s' looks like a backup file" "$base_vmlinuz"
+    pause mount
+    start_log "$orig_args"
 
-    local new_kernel_file=$(vmlinuz-version -Nnr -d=:: "$BOOT_DIR"/* | sed -n "s/^$NEW_KERNEL:://p")
+    local default_vm=$VMLINUZ_FILE  second_vm=$VMLINUZ_2_FILE
+
+    local live_all=$(vmlinuz-version -nsr -d : "$full_live_dir")
+    local boot_all=$(vmlinuz-version -nsr -d : "$full_boot_dir")
+
+    local live_cnt=$(echo "$live_all" | wc -l)
+    local boot_cnt=$(echo "$boot_all" | wc -l)
+    local live_files=$(echo "$live_all" | cut -d: -f2)
+    fatal_0 $boot_cnt "Found no kernels in the boot directory"
+    fatal_0 $live_cnt "Found no kernels in the live boot directory"
+
+    # Find/get current vmlinuz file (usually vmlinuz or vmlinuz1)
+    local current_vmlinuz current_version
+
+    #----- RUNNING LIVE -------------------------------------------------------
+    #
+    if [ "$UPDATE_LIVE" ]; then
+        msg "Updating live system"
+        current_version=$(uname -r)
+        current_vmlinuz=$(vmlinuz-version --current $full_live_dir)
+
+        if [ ${#current_vmlinuz} - eq 0 ]; then
+            fatal "Could not find the current vmlinuz file in %s" "$full_live_dir"
+        elif [ -z "${current_vmlinuz##*$KOLD_EXT}" ]; then
+            fatal "FIXME: force rollback"
+        elif [ -z "${current_vmlinuz##*$KBAD_EXT}" ]; then
+            fatal "FIXME: what to do with .bad current vmlinuz file??"
+        fi
+
+    #----- LIVE-USB -----------------------------------------------------------
+    #
+    else
+        msg "Updating live-usb on device %s" "$(pq "$usb_dev")"
+        if echo "$live_files" | grep -q "^$default_vm$" && echo "$live_files" | grep -q "^second_vm$"; then
+            fatal "fixme: select %s versus %s" $default_vm $second_vm
+        fi
+
+        current_version=$(echo "$live_all" | sed -n "s/^\([^:]\+\):$default_vm:.*/\1/p")
+        fatal_z "$current_version" "Could not find a default live kernel in: %s" "$(echo $live_files)"
+        current_vmlinuz=$default_vm
+    fi
+
+    #msg "current kernel version: %s" "$(pq "$current_version")"
+
+    local new_all=$(echo "$boot_all" | grep -v "^$current_version:")
+    local new_cnt=$(echo "$new_all" | wc -l)
+    local new_versions=$(echo "$new_all" | sed -rn "s/^([^:]+):.*/\1/p")
+
+
+    #----- CMDLINE NEW KERNEL -------------------------------------------------
+    #
+    if [ ${#NEW_KERNEL} -gt 0 ]; then
+        [ "x$NEW_KERNEL" = "x$current_version" ] \
+            && fatal "The new kernel %s is the same as the current one" "$NEW_KERNEL"
+
+        if ! echo "$new_all" | grep -q "^$NEW_KERNEL:"; then
+            msg "Found %s new kernel(s): %s" "$new_cnt" "$hi_co$(echo; echo "$new_versions" | sed 's/^/  /')$nc_co"
+
+            fatal "Could not find new kernel %s in boot directory" "$NEW_KERNEL"
+        fi
+        exit
+
+
+    #----- SELECT NEW KERNEL --------------------------------------------------
+    #
+    else
+        case $new_cnt in
+            0)  fatal "Did not find any new kernels in the boot directory"  ;;
+            1)  msg "assumig %s is the new kernel" "$(pq $new_all)"
+                new_kernel=$new_all                                         ;;
+            *) fatal "Fixme: select new kernel from: %s" "$(echo $new_all)" ;;
+        esac
+    fi
+
+    local new_version=$(echo "$new_kernel" | cut -d: -f1)
+    local new_file=$(echo "$new_kernel" | cut -d: -f2)
+    local rel_mod_dir="/lib/modules/$new_version"
+    local new_mod_dir="$root_dir$rel_mod_dir"
+    test -e "$new_mod_dir" || fatal "The module directory '%s' does not exist"     "$rel_mod_dir"
+    test -d "$new_mod_dir" || fatal "The module directory '%s' is not a directory" "$rel_mod_dir"
+
+    #-- local base_vmlinuz=$(basename "$current_vmlinuz")
+
+    #-- force rollback || [ -n "${base_vmlinuz##*.old}" ] || yes_NO_fatal "rollback" \
+    #--         "$(printf "Do you want to overwrite the backup '%s' file" "$base_vmlinuz")" \
+    #--         "Use --force=overwrite to always overwrite backups" \
+    #--         "The current vmlinuz file '%s' looks like a backup file" "$base_vmlinuz"
+
+    #-- local new_kernel_file=$(vmlinuz-version -Nnr -d=:: "$BOOT_DIR" | sed -n "s/^$NEW_KERNEL:://p")
 
     local new_kernel_name=$(basename "$new_kernel_file")
 
     local info_fmt="%25s:$white %s"
-    msg "$info_fmt" "Current kernel version" "$CURRENT_KERNEL"
-    msg "$info_fmt" "New kernel version"     "$NEW_KERNEL"
-    msg "$info_fmt" "Current vmlinuz file"   "$base_vmlinuz"
-    msg "$info_fmt" "New module directory"   "$new_mod_dir"
-    msg "$info_fmt" "New kernel file"        "${new_kernel_file:-????}"
+    msg
+    msg "$info_fmt" "Current kernel version" "$current_version"
+    msg "$info_fmt" "New kernel version"     "$new_version"
+    msg "$info_fmt" "Current vmlinuz file"   "$current_vmlinuz"
+    #msg "$info_fmt" "New module directory"   "$rel_mod_dir"
+    #msg "$info_fmt" "New kernel file"        "$new_file"
     msg
 
-    test -e "$LIVE_BOOT_DIR" || fatal "The live boot directory '%s' does not exist"     "$LIVE_BOOT_DIR"
-    test -d "$LIVE_BOOT_DIR" || fatal "The live boot directory '%s' is not a directory" "$LIVE_BOOT_DIR"
-    is_writable "$LIVE_BOOT_DIR" || fatal "The live boot directory '%s' is not writable" "$LVIE_BOOT_DIR"
+    #msg "got here"; exit
 
-    test -e "$BOOT_DIR"      || fatal "The boot directory '%s' does not exist"          "$BOOT_DIR"
-    test -d "$BOOT_DIR"      || fatal "The boot directory '%s' is not a directory"      "$BOOT_DIR"
-
-    test -e "$new_mod_dir"   || fatal "The module directory '%s' does not exist"        "$new_mod_dir"
-    test -d "$new_mod_dir"   || fatal "The module directory '%s' is not a directory"    "$new_mod_dir"
-
-    [ ${#new_kernel_file} -gt 0 ] || fatal "Could not find a new kernel file in %s"     "$BOOT_DIR/"
-
-    if [ ${#current_vmlinuz} -eq 0 ]; then
-        warn "Could not find current vmlinuz file.  Assuming it is '%s'" "$DEFAULT_VMLINUZ"
-        current_vmlinuz="$LIVED_BOOT_DIR/$DEFAULT_VMLINUZ"
-    fi
-
-    full_initrd="$LIVE_BOOT_DIR/$DEFAULT_INITRD"
+    full_initrd="$full_live_dir/$INITRD_FILE"
     test -e "$full_initrd" || fatal "Could not find initrd file: %s" "$full_initrd"
 
     local initrd_dir=$WORK_DIR/initrd
@@ -253,6 +346,9 @@ main() {
         exit 0
     fi
 
+    #--------------------------------------------------------------------------
+    #----- REAL WORK STARTS HERE ----------------------------------------------
+    #--------------------------------------------------------------------------
     if need unpack; then
 
         if force clear; then
@@ -270,16 +366,16 @@ main() {
 
     pause unpack
 
-    old_initrd_mods="$initrd_dir/lib/modules/$CURRENT_KERNEL"
+    old_initrd_mods="$initrd_dir/lib/modules/$current_version"
 
     force missing-mod || test -d "$old_initrd_mods" || yes_NO_fatal "missing-mod" \
         "Something is wrong but this may still work.  Do you want to continue anyway" \
         "Use --force=missing-mod to ignore this in the future" \
         "There is no module directory for the current kernel in the initrd"
 
-    [ -z "$KEEP_OLD" ] && test -d "$old_initrd_mods" && cmd rm -rf "$old_initrd_mods"
+    #[ -z "$KEEP_OLD" ] && test -d "$old_initrd_mods" && cmd rm -rf "$old_initrd_mods"
 
-    need copy && cmd copy-initrd-modules --quiet --from="$root_dir" --to="$initrd_dir" --kernel="$NEW_KERNEL"
+    need copy && cmd copy-initrd-modules --quiet --count --from="$root_dir" --to="$initrd_dir" --kernel="$new_version"
     pause copy
 
     need repack && repack_initrd "$initrd_dir" "$tmp_initrd_file"  "$compression_file"
@@ -287,17 +383,11 @@ main() {
 
     if need install; then
         do_install "$tmp_initrd_file" "$full_initrd"
-        do_install "$new_kernel_file" "$current_vmlinuz"
+        do_install "$full_boot_dir/$new_file" "$full_live_dir/$current_vmlinuz"
     fi
     pause install
 
-    exit
-
     my_exit 0
-}
-
-pause() {
-    local where=$1
 }
 
 unpack_initrd() {
@@ -342,8 +432,8 @@ repack_initrd() {
           lzip) args="$LZ_OPTS"  ;;
             xz) args="$XZ_OPTS"  ;;
              *) yes_NO_fatal "compress" \
-               "Do you want to continue on using gzip compression" \
-               "Use --force=compress to skip this question in the future" \
+               "Do you want to continue on using gzip compression?" \
+               "Use %s to skip this question in the future" \
                "Unknown compression format: %s" "$compression"
                 compress="gzip" ; args="$GZIP_OPTS"  ;;
     esac
@@ -351,7 +441,7 @@ repack_initrd() {
     need_prog $compress
 
     local cpio_file="$dir.out"
-    (cd "$dir" && find . -depth | cpio $CPIO_OPTS) > $cpio_file \
+    (cd "$dir" && find . | cpio $CPIO_OPTS) > $cpio_file \
         || fatal "Could not create a cpio archive"
 
     msg "Compressing ..."
@@ -360,11 +450,14 @@ repack_initrd() {
 
 do_install() {
     local from=$1  dest=$2
-    test -f "$from" || fail "Installation file %s does not exist" "$from"
+    test -f "$from" || fatal "Installation file %s does not exist" "$from"
+
+    msg "install %s" "$(pq $(basename $dest))"
+    #msg "install %s --> %s" "$from" "$dest"
 
     if test -e "$dest"; then
-        if [ -n "${dest%%*.old}" ]; then
-            local backup="$dest.old"
+        if [ -n "${dest%%*$KOLD_EXT}" ]; then
+            local backup="$dest$KOLD_EXT"
             msg "backing up %s to %s" "$(pq $(basename "$dest"))" "$(pq $(basename "$backup"))"
             cmd mv "$dest" "$backup"
         else
@@ -375,23 +468,29 @@ do_install() {
     fi
 
     cmd cp "$from" "$dest"
+
+   local md5=$dest$MD5_EXT
+   if test -e $md5; then
+       cmd mv $md5 $md5$KOLD_EXT
+       (cd $(dirname $dest) && md5sum $(basename $dest) > $dest$MD5_EXT)
+    fi
 }
 
 do_rollback() {
     local dir=$1  vmlinuz=$2  initrd=$3
 
     local old_vmlinuz bad_vmlinuz the_vmlinuz f
-    for f in $vmlinuz$OLD_EXT ${vmlinuz}1$OLD_EXT; do
+    for f in $vmlinuz$KOLD_EXT ${vmlinuz}1$KOLD_EXT; do
         test -e $dir/$f || continue
         msg "Found old vmlinuz file %s" $f
         old_vmlinuz="$dir/$f"
-        bad_vmlinuz=${old_vmlinuz%%$OLD_EXT}$PREV_EXT
+        bad_vmlinuz=${old_vmlinuz%%$KOLD_EXT}$PREV_EXT
         the_vmlinuz="$dir/$f"
         break
     done
     [ "$old_vmlinuz" ] || fatal "Could not find old %s file to roll back" $vmlinuz
 
-    local new_initrd="$dir/$initrd$OLD_EXT"
+    local new_initrd="$dir/$initrd$KOLD_EXT"
     local bad_initrd="$dir/$initrd$PREV_EXT"
     local the_initrd="$dir/$initrd"
 
@@ -445,7 +544,15 @@ clean_up() {
             continue
         fi
     done
-    #test -d $WORK_DIR && rmdir $WORK_DIR
+    if test -d $WORK_DIR; then
+        test -d $WORK_DIR/initrd && rm -rf $WORK_DIR/initrd
+        for file in $(ls $WORK_DIR); do
+            full=$WORK_DIR/$file
+            [ -f $full -o -p $full ] && rm $full
+        done
+
+        rmdir $WORK_DIR
+    fi
 
     rm -f $LOCK_FILE
 }
@@ -460,22 +567,24 @@ load_lib() {
     for dir in $path; do
         lib=$dir/$file
         test -r $lib || continue
-        . $lib || return 2
+        if ! . $lib; then
+            printf "Error when loading library %s\n" "$lib" >&2
+            printf "This is a fatal error\n" >&2
+            exit 15
+        fi
         FOUND_LIB=$lib
-        break
+        IFS=$orig_ifs
+        return 0
     done
-    IFS=$orig_ifs
-    [ "$FOUND_LIB" ] && return 0
-    return 3
+
+    printf "Could not find library '%s' on path '%s'\n" "$file" "$path" >&2
+    printf "This is a fatal error\n" >&2
+    exit 17
 }
 
 #===== Start Here =============================================================
 LIB_PATH="$LIB_PATH:$MY_DIR/../cli-shell-utils:$MY_DIR"
-if ! load_lib "$SHELL_LIB" "$LIB_PATH" ; then
-    printf "Could not find library '%s' on path '%s'\n" "$SHELL_LIB" "$LIB_PATH" >&2
-    printf "This is a fatal error\n" >&2
-    exit 17
-fi
+load_lib "$SHELL_LIB" "$LIB_PATH"
 
 set_colors
 
