@@ -8,7 +8,7 @@ usage() {
     local ret=${1:-0}
 
     cat <<Usage
-Usage:  $ME [options] file1 file2 ...
+Usage:  $ME [options] directory|file1 file2 ...
 
 List all of the vmlinuz image files from the input list along with their Linux
 version strings. Silently ignore files that are not vmlinuz files.  Ignore
@@ -59,30 +59,37 @@ takes_param() {
 }
 
 main() {
-    local SHIFT SHORT_STACK="cdfhnNrRtv"
+    local SHIFT SHORT_STACK="cdfhmnrRstv"
     local CAT_OPT="-v" CURRENT DELIMIT REVERSE VERBOSE NO_CHECK
-    local MOD_DIR=/ SHOW_HEADER=true
+    local MOD_DIR=  SHOW_HEADER=true
 
     [ $# -eq 0 ] && usage
 
     # This loop allows complete intermingling of filenames and options
-    local fcnt=0
+    local files last_file fcnt=0
     while [ $# -gt 0 ]; do
         read_params "$@"
         shift $SHIFT
 
         while [ $# -gt 0 -a ${#1} -gt 0 -a -n "${1##-*}" ]; do
             files="$files$1\n"
+            last_file=$1
             shift
             fcnt=$((fcnt + 1))
         done
     done
 
-    [ $fcnt -lt 1 ] && fatal "Expected at least one filename"
+    case $fcnt in
+        0) fatal "Expected at least one filename" ;;
+        1) test -d "$last_file" && files=$(ls -d "$last_file"/*) ;;
+    esac
+
 
     #[ $# -gt 0 ] && fatal "Too much intermingling of files and options"
 
-    local file magic vm_version list f_width=4 v_width=7
+    local ifs="!"
+
+    local file magic vm_version list date f_width=4 v_width=7
 
     #SEP="\t"
 
