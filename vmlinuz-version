@@ -4,6 +4,8 @@
 
 ME=${0##*/}
 
+DATE_FMT="%Y-%m-%d %H:%M"
+
 usage() {
     local ret=${1:-0}
 
@@ -15,17 +17,18 @@ version strings. Silently ignore files that are not vmlinuz files.  Ignore
 legit vmlinuz files that don't have a /lib/modules/\$VERSION directory.
 
 Options:
-  -c, --current         Only display filename of running kernel
-  -d, --delimit=<s>     Use string <s> as the output delimiter
-  -f, --first-only      Only display first column
-  -h, --help            Show this usage
-  -m, --mod-dir=<dir>   Check for /lib/modules/\$VERSION directory under <dir>
-  -n, --noheadings      Don't print headings
-  -r, --reverse         Print the version strings first
-  -R, --raw             Don't send version strings through "cat -v"
-  -s, --short           Remove the path from the filenames
-  -t, --tabs            Use tab as the output delimiter
-  -v, --verbose         Explain processing on stderr
+  -c  --current         Only display filename of running kernel
+  -d  --delimit=<s>     Use string <s> as the output delimiter
+  -D  --date=<fmt>      Date format to use
+  -f  --first-only      Only display first column
+  -h  --help            Show this usage
+  -m  --mod-dir=<dir>   Check for /lib/modules/\$VERSION directory under <dir>
+  -n  --noheadings      Don't print headings
+  -r  --reverse         Print the version strings first
+  -R  --raw             Don't send version strings through "cat -v"
+  -s  --short           Remove the path from the filenames
+  -t  --tabs            Use tab as the output delimiter
+  -v  --verbose         Explain processing on stderr
 
 If an output delimiter is give then the headings are automatically turned off.
 Usage
@@ -39,6 +42,8 @@ eval_argument() {
            -current|c) CURRENT=$(uname -r)             ;;
            -delimit|d) DELIMIT=$val                    ;;
            -delimit=*) DELIMIT=$val                    ;;
+              -date|D) DATE_FMT=$val                   ;;
+              -date=*) DATE_FMT=$val                   ;;
              -first|f) FIRST_ONLY=true                 ;;
               -help|h) usage                           ;;
            -mod-dir|m) MOD_DIR=$val                    ;;
@@ -61,7 +66,7 @@ takes_param() {
 }
 
 main() {
-    local SHIFT SHORT_STACK="cdfhmnrRstv"
+    local SHIFT SHORT_STACK="cdDfhmnrRstv"
     local CAT_OPT="-v" CURRENT DELIMIT REVERSE VERBOSE NO_CHECK
     local MOD_DIR=  SHOW_HEADER=true
 
@@ -115,7 +120,7 @@ main() {
            continue
         fi
 
-        date=$(date -d @$(stat -c %Y "$file"))
+        date=$(date "+${DATE_FMT#+}" -d @$(stat -c %Y "$file"))
 
         [ "$SHORT" ] && file=${file##*/}
 
