@@ -235,9 +235,10 @@ main() {
     local live_all=$(vmlinuz-version -nsr -d : "$full_live_dir")
     local boot_all=$(vmlinuz-version -nsr -d : "$full_boot_dir")
 
-    local live_cnt=$(echo "$live_all" | wc -l)
-    local boot_cnt=$(echo "$boot_all" | wc -l)
+    local live_cnt=$(echo  "$live_all" | grep -c .)
+    local boot_cnt=$(echo  "$boot_all" | grep -c .)
     local live_files=$(echo "$live_all" | cut -d: -f2)
+
     fatal_0 $boot_cnt "Found no kernels in the boot directory"
     fatal_0 $live_cnt "Found no kernels in the live boot directory"
 
