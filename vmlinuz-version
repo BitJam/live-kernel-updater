@@ -148,6 +148,7 @@ Files
     local orig_ifs=$IFS
     IFS=$ifs
     while read vm_version file date; do
+        [ ${#vm_version} -gt 0 ] || continue
         if [ "$REVERSE" ]; then
             if [ "$FIRST_ONLY" ]; then
                 echo "$vm_version"
