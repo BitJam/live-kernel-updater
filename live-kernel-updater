@@ -297,12 +297,7 @@ main() {
     #----- SELECT NEW KERNEL --------------------------------------------------
     #
     else
-        case $new_cnt in
-            0)  fatal "Did not find any new kernels in the boot directory"  ;;
-            1)  msg "assumig %s is the new kernel" "$(pq $new_all)"
-                new_kernel=$new_all                                         ;;
-            *) fatal "Fixme: select new kernel from: %s" "$(echo $new_all)" ;;
-        esac
+        select_new_kernel new_kernel "$new_all"
     fi
 
     local new_version=$(echo "$new_kernel" | cut -d: -f1)
@@ -389,6 +384,23 @@ main() {
     pause install
 
     my_exit 0
+}
+
+#===============================================================================
+# END OF MAIN
+#===============================================================================
+
+select_new_kernel() {
+    local var=$1  list=$2
+    local cnt=$(echo "$list" | wc -l)
+
+        case $new_cnt in
+            0)  fatal "Did not find any new kernels in the boot directory"  ;;
+            1)  msg "assuming %s is the new kernel" "$(pq $new_all)"
+                new_kernel=$new_all                                         ;;
+            *) fatal "Fixme: select new kernel from: %s" "$(echo $new_all)" ;;
+        esac
+
 }
 
 unpack_initrd() {
