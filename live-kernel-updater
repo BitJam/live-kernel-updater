@@ -292,14 +292,15 @@ main() {
 
     local live_vm=$(find_kernel_fname "$both_vm" "$live_all")                 # live with default vmlinuz names
     local vm_cnt=$(count_lines "$live_vm")
+    local live_old=$(find_kernel_fname "($both_vm)$KOLD_EXT" "$live_all" )
 
-    local live_versions=$(get_kernel_version "$live_vm" | tr "\n" "|")
+    # Exclude vmlinuz vmlinuz1, vmlinuz.kold, and vmlinuz1.kold from new kernel list
+    local live_both=$(echo -e "$live_vm\n$live_old")
+    local live_versions=$(get_kernel_version "$live_both" | tr "\n" "|")
     live_versions=${live_versions%|}
 
     local boot_new=$(find_kernel_version "$live_versions" "$boot_all" -v)
     local new_cnt=$(count_lines "$boot_new")
-
-    local live_old=$(find_kernel_fname "($both_vm)$KOLD_EXT" "$live_all")
 
     msg_1 "$new_cnt" "Found one new kernel %s"     "$(pq $(get_kernel_version $boot_new))"
     msg_1 "$vm_cnt"  "Found one default kernel %s" "$(pq $(get_kernel_fname "$live_vm"))"
