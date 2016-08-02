@@ -301,7 +301,7 @@ main() {
     local live_versions=$(get_kernel_version "$live_both" | tr "\n" "|")
     live_versions=${live_versions%|}
 
-    local boot_new=$(find_kernel_version "$live_versions" "$boot_all" -v | head -n1)
+    local boot_new=$(find_kernel_version "$live_versions" "$boot_all" -v)
     local new_cnt=$(count_lines "$boot_new")
 
     #msg_1 "$new_cnt" "Found one new kernel %s"     "$(pq $(get_kernel_version $boot_new))"
