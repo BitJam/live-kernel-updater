@@ -8,7 +8,7 @@ Update the kernel on an antiX or MX live-usb or a running live system.
     git clone https://github.com/BitJam/live-kernel-updater
     git clone https://github.com/BitJam/cli-shell-utils
     cd live-kernel-updater
-    sudo ./live-kernel-updater all
+    sudo ./live-kernel-updater
 
 # Usage
 
