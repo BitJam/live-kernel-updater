@@ -314,7 +314,7 @@ main() {
     msg_kernel "$boot_new"  "new installed kernel"    "new installed kernels"
 
     show_kernel_3 "Live Kernels:" "$live_all" | strip_color >> $LOG_FILE
-    show_kernel_2 "Boot Kernels:" "$boot_mod" | strip_color >> $LOG_FILE
+    show_kernel_3 "Boot Kernels:" "$boot_mod" | strip_color >> $LOG_FILE
 
     fatal_k0 "$boot_all" $"No kernels found in the boot directory"
     fatal_k0 "$boot_mod" $"No valid kernels found in the boot directory"
