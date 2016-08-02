@@ -472,22 +472,22 @@ select_update_rollback_action() {
     IFS=$K_IFS
 
     # FIXME: go through twice to get widths?
-    local fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s$nc_co %s ($date_co%s$nc_co)\n"
+    local fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s %s ($date_co%s$nc_co)\n"
     local live_k  action='update' what=$"Update"
     if [ $new_cnt -gt 0 ]; then
         while read version fname date; do
             [ ${#version} -eq 0 ] && continue
-            menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"from" "$version" "$date")\n"
+            menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"from" "$(vq $version)" "$date")\n"
         done <<Live_VM
 $(echo "$live_vm")
 Live_VM
     fi
     action="rollback" what=$"Rollback"
-    fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s$nc_co %s ($date_co%s$nc_co)\n"
+    fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s %s ($date_co%s$nc_co)\n"
      while read version fname date; do
         [ ${#version} -eq 0 ] && continue
         fname=${fname%$KOLD_EXT}
-        menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"to" "$version" "$date")\n"
+        menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"to" "$(vq $version)" "$date")\n"
     done <<Old_VM
 $(echo "$old_vm")
 Old_VM
@@ -795,7 +795,7 @@ msg_kernel() {
         msg "  %2s %s %s" $(nq $cnt) "$lab2"
     else
         local version=$(get_kernel_version "$list")
-        msg "  %2s %-24s (%s)" $(nq $cnt) "$lab1" "$(pq $version)"
+        msg "  %2s %-24s (%s)" $(nq $cnt) "$lab1" "$(vq $version)"
         return
     fi
 }
