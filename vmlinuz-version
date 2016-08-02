@@ -249,7 +249,7 @@ read_params() {
 }
 
 fatal() {
-    echo "$ME fatal error: $*"
+    echo "$ME fatal error: $*" >&2
     exit 2
 }
 
