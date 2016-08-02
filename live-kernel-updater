@@ -78,9 +78,8 @@ Options:
                         (use "live" to force updating a running live system)
   -f --force=XXXX       Force the options specfied:
                              flock:  ignore missing flock program
+                               usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
-                          compress:  use gzip instead of unknown compression
-                           install:  Do the upgrade or rollback
   -h --help             Show this usage
   -i --initrd=<name>    Name of initrd file ($INITRD_NAME)
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
