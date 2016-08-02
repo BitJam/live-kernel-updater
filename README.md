@@ -1,5 +1,15 @@
 # live-kernel-updater
-Update the kernel on an antiX or MX live-usb
+Update the kernel on an antiX or MX live-usb or a running live system.
+
+#### Quick Start
+
+    sudo apt-get update       # if needed
+    sudo apt-get install git  # if needed
+    git clone https://github.com/BitJam/live-kernel-updater
+    git clone https://github.com/BitJam/cli-shell-utils
+    cd live-kernel-updater
+    sudo ./live-kernel-updater
+
 
 ### NOTE for early testers
 
