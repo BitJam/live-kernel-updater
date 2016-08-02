@@ -10,24 +10,6 @@ Update the kernel on an antiX or MX live-usb or a running live system.
     cd live-kernel-updater
     sudo ./live-kernel-updater
 
-
-### NOTE for early testers
-
-This program requires the cli-shell-utils.bash library.  We will look
-for it in the same directory this script is in and also in a
-cli-shell-utils/ directory next to the directory this script is in so
-if you clone both repos side-by-side then you should be okay.
-
-We also look for the library in /usr/local/lib/cil-shell-utils/ so if
-you install the library to that directory then you should also be
-okay.
-
-###  Another NOTE for early testers
-
-This script require the programs vmlinuz-version and
-copy-initrd-modules.  They either need be on your path or in the same
-directory this script is in.
-
 # Usage
 
 ```
