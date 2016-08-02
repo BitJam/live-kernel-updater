@@ -49,7 +49,7 @@
         ERR_FILE="/dev/null"
 
         ALL_CMDS="rollback all unpack copy repack install"
-       ALL_FORCE="all,rollback,flock,clear,compress,usb"
+       ALL_FORCE="all,flock,clear,compress,usb,umount"
        ALL_PAUSE="all,fifo,mount,unpack,copy,repack,clean"
 
             PATH="$MY_DIR:/usr/local/share/$ME/bin:$PATH"
