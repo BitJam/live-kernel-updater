@@ -301,11 +301,11 @@ main() {
     local live_versions=$(get_kernel_version "$live_both" | tr "\n" "|")
     live_versions=${live_versions%|}
 
-    local boot_new=$(find_kernel_version "$live_versions" "$boot_all" -v)
+    local boot_new=$(find_kernel_version "$live_versions" "$boot_all" -v | head -n1)
     local new_cnt=$(count_lines "$boot_new")
 
-    msg_1 "$new_cnt" "Found one new kernel %s"     "$(pq $(get_kernel_version $boot_new))"
-    msg_1 "$vm_cnt"  "Found one default kernel %s" "$(pq $(get_kernel_fname "$live_vm"))"
+    #msg_1 "$new_cnt" "Found one new kernel %s"     "$(pq $(get_kernel_version $boot_new))"
+    #msg_1 "$vm_cnt"  "Found one default kernel %s" "$(pq $(get_kernel_fname "$live_vm"))"
 
     msg "Found:"
     msg_kernel "$live_all"  "total live kernel"       "total live kernels"
@@ -318,7 +318,11 @@ main() {
     show_kernel_3 "Live kernels:" "$live_all" | strip_color >> $LOG_FILE
     show_kernel_3 "Boot kernels:" "$boot_all" | strip_color >> $LOG_FILE
 
-    [ $new_cnt -gt 0 ] && log_it show_kernel_2 "New installed kernels:" "$boot_new"
+    case $new_cnt in
+        0) ;;
+        1) log_it show_kernel_2 "Only one new installed kernel found:" "$boot_new" ;;
+        *) log_it show_kernel_2 "New installed kernels:" "$boot_new" ;;
+    esac
 
     fatal_k0 "$boot_all" $"No kernels found in the boot directory"
     #fatal_k0 "$boot_mod" $"No valid kernels found in the boot directory"
