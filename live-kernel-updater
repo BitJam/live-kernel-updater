@@ -372,7 +372,7 @@ Old$K_IFS$target_fname$KOLD_EXT$K_IFS$target_fname$K_IFS$new_kernel
     fi
 
     msg
-    quest "Ready to make the following live kernel %s:\n" "$(pqq $action_name)"
+    quest "Ready to make the following live kernel %s:\n" "$action_name"
     #kernel_stats "$stat_list" | log_it
     log_it kernel_stats "$stat_list"
 
