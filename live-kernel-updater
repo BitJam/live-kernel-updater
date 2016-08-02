@@ -380,7 +380,7 @@ Old$K_IFS$target_fname$KOLD_EXT$K_IFS$target_fname$K_IFS$new_kernel
 
     if [ "$action" = "rollback" ]; then
         do_rollback  "$full_live_dir" "$target_fname" "$INITRD_NAME"
-        my_exit
+        my_done "$action"
     fi
 
     local initrd_dir=$WORK_DIR/initrd
@@ -431,7 +431,7 @@ Old$K_IFS$target_fname$KOLD_EXT$K_IFS$target_fname$K_IFS$new_kernel
     fi
     pause install
 
-    my_exit 0
+    my_done "$action"
 }
 
 #==============================================================================
@@ -787,6 +787,19 @@ msg_kernel() {
     fi
 }
 
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+my_done() {
+    local action=$1
+    echo
+    if [ "$PRETEND" ]; then
+        shout "%s %s %s (%s)." "$ME" "$action" $"done" "$(pqh $"in pretend mode")"
+    else
+        shout "%s %s %s." "$ME" "$action" $"done"
+    fi
+    my_exit 0
+}
 
 #------------------------------------------------------------------------------
 # Do a few things before cleaning up.
@@ -800,7 +813,7 @@ my_exit() {
         bash -I
     fi
 
-    Msg "=> cleaning up"
+    #Msg "=> cleaning up"
     exit $ret
 }
 
