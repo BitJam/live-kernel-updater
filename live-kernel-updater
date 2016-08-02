@@ -472,6 +472,7 @@ select_update_rollback_action() {
     local live_k  action='update' what=$"Update"
     if [ $new_cnt -gt 0 ]; then
         while read version fname date; do
+            [ ${#version} -eq 0 ] && continue
             menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"from" "$version" "$date")\n"
         done <<Live_VM
 $(echo "$live_vm")
@@ -480,6 +481,7 @@ Live_VM
     action="rollback" what=$"Rollback"
     fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s$nc_co %s ($date_co%s$nc_co)\n"
      while read version fname date; do
+        [ ${#version} -eq 0 ] && continue
         fname=${fname%$KOLD_EXT}
         menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"to" "$version" "$date")\n"
     done <<Old_VM
@@ -757,6 +759,7 @@ find_valid_kernel() {
 
     local line version
     while read line; do
+        [ ${#line} -eq 0 ] && continue
         version=$(get_kernel_version "$line")
         if -d "$dir/lib/modules/$version"; then
             out="$out$line\n"
