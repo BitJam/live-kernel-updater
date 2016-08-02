@@ -45,13 +45,15 @@ Commands:
 
 Options:
   -a --auto             Non-interactive.  Always assume the safe answer
+     --color=<xxx>      Set color scheme to off|low|high
   -D --debug            Pause before cleaning up
   -d --device=<device>  live-usb device to update the kernel on
                         (use "live" to force updating a running live system)
   -f --force=XXXX       Force the options specfied:
-                                flock:  ignore missing flock program
-                                clear:  remove previous initrd directory
-                             compress:  use gzip instead of unknown compression
+                             flock:  ignore missing flock program
+                             clear:  remove previous initrd directory
+                          compress:  use gzip instead of unknown compression
+                           install:  Do the upgrade or rollback
   -h --help             Show this usage
   -i --initrd=<name>    Name of initrd file (initrd.gz)
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
