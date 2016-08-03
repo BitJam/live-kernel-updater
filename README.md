@@ -31,7 +31,7 @@ Options:
   -D --debug            Pause before cleaning up
   -d --device=<device>  live-usb device to update the kernel on
                         (use "live" to force updating a running live system)
-  -f --force=XXXX       Force the options specfied:
+  -F --force=XXXX       Force the options specfied:
                              flock:  ignore missing flock program
                                usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
