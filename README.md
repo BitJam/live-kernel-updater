@@ -30,9 +30,11 @@ The log file is at `/var/log/live-kernel-updater.log`.
 
 ```
 Usage: live-kernel-updater [options] [command]
-Update the kernel on a running antiX or MX live-usb.  The new
-kernel must already be installed.  If the name (uname -r) of the new
-kernel is not give then you will be prompted for it from a menu.
+
+Update the kernel on a running antiX/MX live-usb or on an antiX/MX live-usb
+that is plugged into another system.  The new kernel must already be installed.
+You will be prompted for info that is needed but not given in command line
+arguments.
 
 Commands:
    all         All commands below
