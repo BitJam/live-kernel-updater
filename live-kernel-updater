@@ -251,7 +251,10 @@ main() {
 
     is_mountpoint "$live_mp" || fatal "Expected '%s' to be a mountpoint" "$live_mp"
 
-    local full_live_dir=$live_mp/${LIVE_DIR#/}
+    # local full_live_dir=$live_mp/${LIVE_DIR#/}
+    local full_live_dir
+    find_live_boot_dir full_live_dir $live_mp $LINUXFS_NAME
+
     check_writable "$full_live_dir" "live boot"
 
     # Find the linuxfs file (where we get new kernels and modules from)
@@ -450,6 +453,30 @@ Old$K_IFS$target_fname$KOLD_EXT$K_IFS$target_fname$K_IFS$new_kernel
 #==============================================================================
 # Menu Routines
 #==============================================================================
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+find_live_boot_dir() {
+    local var=$1  mp=$2  fname=$3
+    local find_opts="-maxdepth 2 -mindepth 2 -type f -name $fname"
+
+    local list=$(find $mp $find_opts | sed -e "s|$fname$||")
+    case $(count_lines "$list") in
+        0) Fatal "No '%s' found in any directory in '%s'" "$fname" "$mp" ;;
+        1) eval $var=\$list
+           return ;;
+    esac
+    local full dir menu
+    while read full; do
+        menu="$menu$full$P_IFS${full#$mp}\n"
+    done<<Live_Boot_Dir
+$(echo "$list")
+Live_Boot_Dir
+
+    my_select_quit $var "Please select the live boot directory" "$menu"
+
+}
 #------------------------------------------------------------------------------
 # This is the first menu.  It is used to select the current live system or a
 # plugged in usb or removable device.
