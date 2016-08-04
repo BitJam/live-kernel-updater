@@ -253,8 +253,9 @@ main() {
     is_mountpoint "$live_mp" || fatal "Expected '%s' to be a mountpoint" "$live_mp"
 
     # local full_live_dir=$live_mp/${LIVE_DIR#/}
-    local full_live_dir
-    find_live_boot_dir full_live_dir $live_mp $LINUXFS_NAME
+    local full_live_dir rel_live_dir
+    find_live_boot_dir rel_live_dir $live_mp $LINUXFS_NAME
+    local full_live_dir=$live_mp/$rel_live_dir
 
     check_writable "$full_live_dir" "live boot"
 
