@@ -37,7 +37,8 @@
        SHELL_LIB="cli-shell-utils.bash"
         LIB_PATH="/usr/local/lib/shell-utils"
 
-   MAJOR_DEV_LIST="3,8,22,179,259"
+    COLOR_SCHEME="high"
+MAJOR_HD_DEV_LIST="3,8,22,179,259"
 
 #== END_CONFIG
 
@@ -109,8 +110,8 @@ eval_argument() {
     local arg=$1 val=$2
     case $arg in
               -auto|a)  AUTO_MODE=true                  ;;
-               -color)  set_colors "$val"               ;;
-             -color=*)  set_colors "$val"               ;;
+               -color)  COLOR_SCHEME=$val               ;;
+             -color=*)  COLOR_SCHEME=$val               ;;
             -device|d)  DEVICE=$val                     ;;
             -device=*)  DEVICE=$val                     ;;
              -debug|D)  DEBUG=true                      ;;
@@ -160,6 +161,7 @@ main() {
 
     read_all_cmdline_mingled "$@"
 
+    set_colors $COLOR_SCHEME
     #[ $opt_cnt -ne 1 ] && fatal 011 "Expected one command line argument"
 
     EXIT_NUM=100
