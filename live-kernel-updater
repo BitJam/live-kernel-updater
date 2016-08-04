@@ -16,6 +16,7 @@
     VMLINUZ_NAME="vmlinuz"
   VMLINUZ_2_NAME="vmlinuz1"
      INITRD_NAME="initrd.gz"
+MIN_LINUXFS_SIZE="100M"
 
         # for kernel and initrd.gz files
        KOLD_EXT=".kold"
@@ -273,9 +274,9 @@ main() {
     local live_remaster
     if [ -z "${linuxfs_name%%*$NEW_EXT}" ]; then
         live_remaster=true
-        msg "Found %s file %s" $(pq live-remaster) $(pq $(basename $linuxfs_name))
+        msg "Found %s file %s in %s" $(pq live-remaster) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
     else
-        msg "Found %s file %s" $(pq linuxfs) $(pq $(basename $linuxfs_name))
+        msg "Found %s file %s in %s" $(pq linuxfs) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
     fi
 
     # Fix me?
@@ -459,17 +460,17 @@ Old$K_IFS$target_fname$KOLD_EXT$K_IFS$target_fname$K_IFS$new_kernel
 #------------------------------------------------------------------------------
 find_live_boot_dir() {
     local var=$1  mp=$2  fname=$3
-    local find_opts="-maxdepth 2 -mindepth 2 -type f -name $fname"
+    local find_opts="-maxdepth 2 -mindepth 2 -type f -name $fname -size +$MIN_LINUXFS_SIZE"
 
-    local list=$(find $mp $find_opts | sed -e "s|$fname$||")
+    local list=$(find $mp $find_opts | sed -e "s|^$mp||" -e "s|/$fname$||")
     case $(count_lines "$list") in
-        0) Fatal "No '%s' found in any directory in '%s'" "$fname" "$mp" ;;
+        0) fatal "No '%s' found in any directory in '%s'" "$fname" "$mp" ;;
         1) eval $var=\$list
            return ;;
     esac
-    local full dir menu
-    while read full; do
-        menu="$menu$full$P_IFS${full#$mp}\n"
+    local dir menu
+    while read dir; do
+        menu="$menu$dir$P_IFS$dir\n"
     done<<Live_Boot_Dir
 $(echo "$list")
 Live_Boot_Dir
