@@ -524,13 +524,13 @@ Live_VM
 $(echo "$old_vm")
 Old_VM
 
+    IFS=$orig_ifs
     menu=$(echo -e "$menu")
 
     local cnt=$(count_lines "$menu")
     fatal_0 "$cnt" "No update or rollback actions are available"
 
-    my_select_quit $var  "Please select an action to perform" "$menu"
-    IFS=$orig_ifs
+    my_select_quit $var "Please select an action to perform" "$menu"
 }
 
 #------------------------------------------------------------------------------
