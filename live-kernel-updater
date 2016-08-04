@@ -197,18 +197,15 @@ main() {
     local we_are_live
     if its_alive_usb; then
         we_are_live=true
-        live_dev=$(sed -rn "s|^([^ ]+) $LIVE_MP .*|\1|p" /proc/mounts)
+        live_dev=$(get_live_dev)
         fatal_z "$live_dev" "Could not find the live boot device"
-        live_dev=${live_dev##*/}
         msg "Current running kernel is %s" "$(pq $(uname -r))"
     fi
 
     #==============================================================================
     # The First Menu
     #==============================================================================
-    local all_dev
-    force usb && all_dev=true
-    [ ${#DEVICE} -eq 0 ] && select_live_usb_device DEVICE "$live_dev" $all_dev
+    [ ${#DEVICE} -eq 0 ] && select_live_usb_device DEVICE "$live_dev"
 
     # Are we going to update a running live system or an plugged in live-usb?
     local usb_dev live_mp
@@ -456,8 +453,8 @@ Old$K_IFS$target_fname$KOLD_EXT$K_IFS$target_fname$K_IFS$new_kernel
 # plugged in usb or removable device.
 #------------------------------------------------------------------------------
 select_live_usb_device() {
-    local var=$1 ; shift
-    local menu=$(cli_drive_menu "$@")
+    local var=$1
+    local menu=$(cli_drive_menu)
 
     if [ "$live_dev" ]; then
         local title=$(printf "The current Live System on %s" "$(pq $live_dev)")
