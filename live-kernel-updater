@@ -475,7 +475,6 @@ $(echo "$list")
 Live_Boot_Dir
 
     my_select_quit $var "Please select the live boot directory" "$menu"
-
 }
 #------------------------------------------------------------------------------
 # This is the first menu.  It is used to select the current live system or a
