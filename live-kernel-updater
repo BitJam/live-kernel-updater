@@ -197,9 +197,10 @@ main() {
     mkdir -p $WORK_DIR || fatal 120 "Could not make a work directory under /run"
     mount -t tmpfs tmpfs $WORK_DIR || fatal 121 "Could not mount tmpfs at %s" $WORK_DIR
 
-    local we_are_live
+    local we_are_live live_dev
     if its_alive_usb; then
         we_are_live=true
+        # FIXME: should use initrd.out to get the uuid, etc
         live_dev=$(get_live_dev)
         fatal_z "$live_dev" "Could not find the live boot device"
         msg "Current running kernel is %s" "$(pq $(uname -r))"
@@ -483,8 +484,8 @@ Live_Boot_Dir
 # plugged in usb or removable device.
 #------------------------------------------------------------------------------
 select_live_usb_device() {
-    local var=$1
-    local menu=$(cli_drive_menu)
+    local var=$1  live_dev=$2
+    local menu=$(cli_drive_menu "$live_dev")
 
     if [ "$live_dev" ]; then
         local title=$(printf "The current Live System on %s" "$(pq $live_dev)")
