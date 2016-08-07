@@ -5,8 +5,6 @@ MY_DIR=$(dirname "$(readlink -f $0)")
 
 #== BEGIN_CONFIG
 
-           K_IFS="|"
-
          LIVE_MP="/live/boot-dev"
         LIVE_DIR="antiX"
         BOOT_DIR="boot"
@@ -19,9 +17,9 @@ MY_DIR=$(dirname "$(readlink -f $0)")
 MIN_LINUXFS_SIZE="100M"
 
         # for kernel and initrd.gz files
-       KOLD_EXT=".kold"
-       KBAD_EXT=".kbad"
-        MD5_EXT=".md5"
+        KOLD_EXT=".kold"
+        KBAD_EXT=".kbad"
+         MD5_EXT=".md5"
 
         # For linuxfs file (right after a remaster)
          NEW_EXT=".new"
@@ -32,14 +30,11 @@ MIN_LINUXFS_SIZE="100M"
          XZ_OPTS="-c -z --format=lzma"
 
        CPIO_OPTS="-o -H newc --owner root:root --quiet"
-
        COPY_OPTS="--quiet --count"
-
        SHELL_LIB="cli-shell-utils.bash"
         LIB_PATH="/usr/local/lib/shell-utils"
-
     COLOR_SCHEME="high"
-MAJOR_HD_DEV_LIST="3,8,22,179,259"
+           K_IFS="|"
 
 #== END_CONFIG
 
