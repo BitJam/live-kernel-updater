@@ -82,6 +82,7 @@ Options:
                              clear:  remove previous initrd directory
   -h --help             Show this usage
   -i --initrd=<name>    Name of initrd file ($INITRD_NAME)
+  -I --ignore-config    Ignore the config file
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
   -p --pretend          Don't run the install commands
@@ -94,6 +95,7 @@ Options:
 
   -q --quiet            Print less
   -v --verbose          Print more, show commands when run
+  -W --write-config     Write a new config file
 
 Notes:
   - short options stack. Example: -pq instead of -p -q
@@ -125,7 +127,27 @@ eval_argument() {
              -pause=*)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
              -quiet|q)  QUIET=true                      ;;
            -verbose|v)  BE_VERBOSE=true                 ;;
+
+       # These are read early.  They are not unknown
+     -ignore-config|I)                                   ;;
+      -write-config|W)                                   ;;
+
                *)  fatal "Unknown parameter %s" "-$arg" ;;
+    esac
+}
+
+eval_early_argument() {
+    case $1 in
+      -ignore-config|I) IGNORE_CONF=true                   ;;
+       -write-config|W) IGNORE_CONF=true ; WRITE_CONF=true ;;
+               -help|h) usage                              ;;
+    esac
+}
+
+assign_parameter() {
+    local cnt=$1 param=$2
+   case $cnt in
+        *) CMDS="$CMDS${CMD:+ }$param" ;;
     esac
 }
 
@@ -141,19 +163,15 @@ takes_param() {
     return 1
 }
 
-assign_parameter() {
-    local cnt=$1 param=$2
-   case $cnt in
-        *) CMDS="$CMDS${CMD:+ }$param" ;;
-    esac
-}
-
 main() {
-    local SHIFT SHORT_STACK="adDFhikKpqv"
+    local SHIFT SHORT_STACK="adDFhiIkKpqvW"
     local BE_VERBOSE
     local orig_args="$*"
 
-    # [ $# -eq 0 ] && usage
+    # Let non-root users get usage.  Need to get --ignore-config early.
+    read_early_params "$@"
+
+    [ $UID -eq 0 ] || fatal 99 $"This script must be run as root"
 
     read_all_cmdline_mingled "$@"
 
@@ -161,7 +179,11 @@ main() {
     #[ $opt_cnt -ne 1 ] && fatal 011 "Expected one command line argument"
 
     EXIT_NUM=100
-    [ $UID -eq 0 ] || fatal 101 "This script must be run as root"
+
+    if [ -z "$IGNORE_CONF" ]; then
+        test -r "$CONF_FILE" && . "$CONF_FILE"
+        test -e "$CONF_FILE" || write_conf "$CONF_FILE"
+    fi
 
     need_prog $VM_VERSION_PROG copy-initrd-modules
 
