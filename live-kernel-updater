@@ -171,12 +171,7 @@ main() {
     # Let non-root users get usage.  Need to get --ignore-config early.
     read_early_params "$@"
 
-    [ $UID -eq 0 ] || fatal 99 $"This script must be run as root"
-
-    read_all_cmdline_mingled "$@"
-
-    set_colors $COLOR_SCHEME
-    #[ $opt_cnt -ne 1 ] && fatal 011 "Expected one command line argument"
+    need_root
 
     EXIT_NUM=100
 
@@ -185,6 +180,11 @@ main() {
         test -e "$CONF_FILE" || write_conf "$CONF_FILE"
     fi
 
+    read_all_cmdline_mingled "$@"
+    set_colors $COLOR_SCHEME
+    check_cmds  CMDS  "$ALL_CMDS"
+    check_force FORCE "$ALL_FORCE"
+    check_pause PAUSE "$ALL_PAUSE"
     need_prog $VM_VERSION_PROG copy-initrd-modules
 
     trap clean_up EXIT
@@ -193,17 +193,13 @@ main() {
 
     : ${CMDS:=all}
 
-    check_cmds  CMDS  "$ALL_CMDS"
-    check_force FORCE "$ALL_FORCE"
-    check_pause PAUSE "$ALL_PAUSE"
-
     start_log "$orig_args"
 
     #[ "$FIFO_MODE" -a "$AUTO_MODE" ] && fatal "Cannot select both %s and %s" "--fifo" "--auto"
 
     [ "$PRETEND" ] && shout "PRETEND MODE ENABLED"
 
-     USB_DIR=$WORK_DIR/usb
+    USB_DIR=$WORK_DIR/usb
     SQFS_DIR=$WORK_DIR/linux
 
     local root_dir=$SQFS_DIR
