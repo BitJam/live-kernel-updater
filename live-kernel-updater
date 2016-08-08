@@ -122,7 +122,7 @@ eval_argument() {
             -kernel|k)  NEW_KERNEL=$val                 ;;
             -kernel=*)  NEW_KERNEL=$val                 ;;
           -keep-old|K)  KEEP_OLD=true                   ;;
-           -pretend|p)  PRETEND=true ;                  ;;
+           -pretend|p)  PRETEND_MODE=true ;             ;;
                -pause)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
              -pause=*)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
              -quiet|q)  QUIET=true                      ;;
@@ -197,7 +197,7 @@ main() {
 
     #[ "$FIFO_MODE" -a "$AUTO_MODE" ] && fatal "Cannot select both %s and %s" "--fifo" "--auto"
 
-    [ "$PRETEND" ] && shout "PRETEND MODE ENABLED"
+    [ "$PRETEND_MODE" ] && shout "PRETEND MODE ENABLED"
 
     USB_DIR=$WORK_DIR/usb
     SQFS_DIR=$WORK_DIR/linux
@@ -780,7 +780,7 @@ msg_kernel() {
 my_done() {
     local action=$1
     echo
-    if [ "$PRETEND" ]; then
+    if [ "$PRETEND_MODE" ]; then
         shout "%s %s %s (%s)." "$ME" "$action" $"done" "$(pqh $"in pretend mode")"
     else
         shout "%s %s %s." "$ME" "$action" $"done"
