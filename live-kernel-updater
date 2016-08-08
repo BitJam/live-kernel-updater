@@ -268,7 +268,9 @@ main() {
 
     # local full_live_dir=$live_mp/${LIVE_DIR#/}
     local full_live_dir rel_live_dir
-    find_live_boot_dir rel_live_dir $live_mp $LINUXFS_NAME
+    find_live_boot_dir rel_live_dir "$live_mp" "$LINUXFS_NAME" \
+        || fatal $"No '%s' found in any directory in '%s'" "$LINUXFS_NAME" "$live_mp"
+
     local full_live_dir=$live_mp/$rel_live_dir
 
     check_writable "$full_live_dir" "live boot"
@@ -470,28 +472,6 @@ Old$K_IFS$target_fname$KOLD_EXT$K_IFS$target_fname$K_IFS$new_kernel
 # Menu Routines
 #==============================================================================
 
-#------------------------------------------------------------------------------
-#
-#------------------------------------------------------------------------------
-find_live_boot_dir() {
-    local var=$1  mp=$2  fname=$3
-    local find_opts="-maxdepth 2 -mindepth 2 -type f -name $fname -size +$MIN_LINUXFS_SIZE"
-
-    local list=$(find $mp $find_opts | sed -e "s|^$mp||" -e "s|/$fname$||")
-    case $(count_lines "$list") in
-        0) fatal "No '%s' found in any directory in '%s'" "$fname" "$mp" ;;
-        1) eval $var=\$list
-           return ;;
-    esac
-    local dir menu
-    while read dir; do
-        menu="$menu$dir$P_IFS$dir\n"
-    done<<Live_Boot_Dir
-$(echo "$list")
-Live_Boot_Dir
-
-    my_select_quit $var "Please select the live boot directory" "$menu"
-}
 #------------------------------------------------------------------------------
 # This is the first menu.  It is used to select the current live system or a
 # plugged in usb or removable device.
