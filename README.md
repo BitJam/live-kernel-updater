@@ -55,6 +55,7 @@ Options:
                              clear:  remove previous initrd directory
   -h --help             Show this usage
   -i --initrd=<name>    Name of initrd file (initrd.gz)
+  -I --ignore-config    Ignore the config file
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
   -p --pretend          Don't run the install commands
@@ -67,6 +68,7 @@ Options:
 
   -q --quiet            Print less
   -v --verbose          Print more, show commands when run
+  -W --write-config     Write a new config file
 
 Notes:
   - short options stack. Example: -pq instead of -p -q
