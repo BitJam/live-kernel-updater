@@ -299,9 +299,9 @@ main() {
     local live_remaster
     if [ -z "${linuxfs_name%%*$NEW_EXT}" ]; then
         live_remaster=true
-        msg "Found %s file %s in %s" $(pq live-remaster) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
+        msg "Found %s file %s in directory %s" $(pq live-remaster) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
     else
-        msg "Found %s file %s in %s" $(pq linuxfs) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
+        msg "Found %s file %s in directory %s" $(pq linuxfs) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
     fi
 
     # Fix me?
