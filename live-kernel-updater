@@ -201,7 +201,7 @@ main() {
 
     #[ "$FIFO_MODE" -a "$AUTO_MODE" ] && fatal "Cannot select both %s and %s" "--fifo" "--auto"
 
-    [ "$PRETEND_MODE" ] && shout "PRETEND MODE ENABLED"
+    shout_pretend
 
     USB_DIR=$WORK_DIR/usb
     SQFS_DIR=$WORK_DIR/linux
@@ -269,6 +269,8 @@ main() {
     fi
 
     is_mountpoint "$live_mp" || fatal "Expected '%s' to be a mountpoint" "$live_mp"
+
+    show_distro_version "$live_mp"
 
     # local full_live_dir=$live_mp/${LIVE_DIR#/}
     local full_live_dir rel_live_dir
