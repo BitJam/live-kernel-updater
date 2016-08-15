@@ -808,9 +808,9 @@ my_done() {
     local action=$1
     echo
     if [ "$PRETEND_MODE" ]; then
-        shout "%s %s %s (%s)." "$ME" "$action" $"done" "$(pqh $"in pretend mode")"
+        Shout "%s %s %s (%s)." "$ME" "$action" $"done" "$(pqh $"in pretend mode")"
     else
-        shout "%s %s %s." "$ME" "$action" $"done"
+        Shout "%s %s %s." "$ME" "$action" $"done"
     fi
     my_exit 0
 }
