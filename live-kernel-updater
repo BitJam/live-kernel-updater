@@ -84,7 +84,8 @@ Options:
                                usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
   -h --help             Show this usage
-  -i --initrd=<name>    Name of initrd file ($INITRD_NAME)
+  -i --initrd=<name>    Name of initrd file ($INITRD_NAME).  If the name has
+                        leading / then treated as full path to alternate initrd
   -I --ignore-config    Ignore the config file
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
@@ -305,7 +306,14 @@ main() {
 
     pause mount
 
-    full_initrd="$full_live_dir/$INITRD_NAME"
+    local full_initrd
+    if [ ${#INITRD_NAME} -eq 0 ]; then
+        fatal "An empty initrd name was given"
+    elif [ -z "${INITRD_NAME##/*}" ]; then
+        full_initrd=$INITRD_NAME
+    else
+        full_initrd="$full_live_dir/$INITRD_NAME"
+    fi
     test -e "$full_initrd" || fatal "Could not find initrd file: %s" "$full_initrd"
 
     # default live kernels: vmlinuz and vmlinuz1
