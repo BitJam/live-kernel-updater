@@ -384,49 +384,57 @@ main() {
     local target_fname=${action_target#*@}
 
     #----- Update Action -------------------------------------------------------------------------
-    local new_kernel new_version new_fname stat_list action_name
+    local new_kernel new_version new_fname stat_list action_name stat_info
     if [ "$action" = "update" ]; then
         action_name=$"update"
 
         target=$(find_kernel_fname "$target_fname" "$live_vm")
+        local target_version=$(get_kernel_version "$target")
+        local target_date=$(get_kernel_date "$target")
 
         #==========================================================================
         # The Third Menu (only if needed)
         #==========================================================================
         select_new_kernel new_kernel "$NEW_KERNEL" "$boot_new"
+
         new_fname=$(get_kernel_fname "$new_kernel")
         new_version=$(get_kernel_version "$new_kernel")
+        new_date=$(get_kernel_date "$new_kernel")
         test -d $root_dir/lib/modules/$new_version \
             || fatal "Missing modules directory for kernel '%s'" "$new_version"
 
-        stat_list="
-Current$K_IFS$target_fname$K_IFS$target_fname$KOLD_EXT$K_IFS$target
-New$K_IFS(new)$K_IFS$target_fname$K_IFS$new_kernel"
+        stat_info=$(kernel_stats \
+            $"Current" "$target_version" "$target_date" "$target_fname" "$target_fname$KOLD_EXT" \
+            $"New"     "$new_version"    "$new_date"    $"(new)"        "$target_fname")
 
     #---- Rollback Action ---------------------------------------------------------
     elif [ "$action" = "rollback" ]; then
         action_name=$"rollback"
         target=$(find_kernel_fname "$target_fname" "$live_vm")
+        local target_version=$(get_kernel_version "$target")
+        local target_date=$(get_kernel_date "$target")
+
         new_kernel=$(find_kernel_fname "$target_fname$KOLD_EXT" "$live_old")
         new_fname=$(get_kernel_fname "$new_kernel")
         new_version=$(get_kernel_version "$new_kernel")
+        new_date=$(get_kernel_date "$new_kernel")
+
         test -d $root_dir/lib/modules/$new_version \
             || fatal "Missing modules directory for kernel '%s'" "$new_fname"
 
-        stat_list="
-Current$K_IFS$target_fname$K_IFS$target_fname$KBAD_EXT$K_IFS$target
-Old$K_IFS$target_fname$KOLD_EXT$K_IFS$target_fname$K_IFS$new_kernel
-"
+        stat_info=$(kernel_stats \
+            $"Current" "$target_version" "$target_date" "$target_fname"          "$target_fname$KBAD_EXT" \
+            $"Old"     "$new_version"    "$new_date"    "$target_fname$KOLD_EXT" "$target_fname")
+
     else
         fatal "Internal error.  Unknown action %s" "$action"
     fi
 
     msg
-    quest "Ready to make the following live kernel %s:\n" "$action_name"
-    #kernel_stats "$stat_list" | log_it
-    log_it kernel_stats "$stat_list"
+    Shout "Ready to make the following live kernel %s:" "$action_name"
+    log_it echo "$stat_info"
 
-    YES_no "Shall we begin?" || my_exit
+    YES_no_pretend || my_exit
 
     if [ "$action" = "rollback" ]; then
         do_rollback  "$full_live_dir" "$target_fname" "$INITRD_NAME"
@@ -614,7 +622,6 @@ select_live_target() {
 
     select_kernel_3 "Please select which live kernel you want to replace" $var "$list"
 }
-
 
 #==============================================================================
 # The Routines that do the "real" work.
