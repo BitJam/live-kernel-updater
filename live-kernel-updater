@@ -5,6 +5,9 @@ MY_DIR=$(dirname "$(readlink -f $0)")
 
 #== BEGIN_CONFIG
 
+         NO_QUIT="true"  # FOR TESTING
+
+       MAX_FILES=20
          LIVE_MP="/live/boot-dev"
         LIVE_DIR="antiX"
         BOOT_DIR="boot"
@@ -345,6 +348,11 @@ main() {
         1) log_it show_kernel_2 "Only one new installed kernel found:" "$boot_new" ;;
         *) log_it show_kernel_2 "New installed kernels:" "$boot_new" ;;
     esac
+
+    if [ $new_cnt -gt $MAX_FILES ]; then
+        warn "There are %s new kernels.  Only showing the most recent %s." "$new_cnt" "$MAX_FILES"
+        boot_new=$(echo "$boot_new" | grep . | head -n $MAX_FILES)
+    fi
 
     fatal_k0 "$boot_all" $"No kernels found in the boot directory"
     #fatal_k0 "$boot_mod" $"No valid kernels found in the boot directory"
