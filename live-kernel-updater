@@ -895,6 +895,44 @@ load_lib() {
     exit 17
 }
 
+write_config() {
+    local file=${1:-$CONFIG_FILE}
+    local dir=$(dirname "$file")
+    mkdir -p "$dir" || fatal "Could not make config file directory %s" "$dir"
+    cat<<Config_File >"$file"
+         NO_QUIT="$NO_QUIT"  # FOR TESTING
+
+       MAX_FILES="$MAX_FILES"
+         LIVE_MP="$LIVE_MP"
+        LIVE_DIR="$LIVE_DIR"
+        BOOT_DIR="$BOOT_DIR"
+
+ VM_VERSION_PROG="$VM_VERSION_PROG"
+    LINUXFS_NAME="$LINUXFS_NAME"
+    VMLINUZ_NAME="$VMLINUZ_NAME"
+  VMLINUZ_2_NAME="$VMLINUZ_2_NAME"
+     INITRD_NAME="$INITRD_NAME"
+MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
+
+        # for kernel and initrd.gz files
+        KOLD_EXT="$KOLD_EXT"
+        KBAD_EXT="$KBAD_EXT"
+         MD5_EXT="$MD5_EXT"
+
+        # For linuxfs file (right after a remaster)
+         NEW_EXT="$NEW_EXT"
+
+        BZ2_OPTS="$BZ2_OPTS"
+         GZ_OPTS="$GZ_OPTS"
+         LZ_OPTS="$LZ_OPTS"
+         XZ_OPTS="$XZ_OPTS"
+
+       CPIO_OPTS="$CPIO_OPTS"
+       COPY_OPTS="$COPY_OPTS"
+       SHELL_LIB="$SHELL_LIB"
+    COLOR_SCHEME="$COLOR_SCHEME"
+Config_File
+}
 #===== Start Here =============================================================
 LIB_PATH="$LIB_PATH:$MY_DIR/../cli-shell-utils:$MY_DIR"
 load_lib "$SHELL_LIB" "$LIB_PATH"
