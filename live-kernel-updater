@@ -190,10 +190,7 @@ main() {
     check_pause PAUSE "$ALL_PAUSE"
     need_prog $VM_VERSION_PROG copy-initrd-modules
 
-    if [ "$WRITE_CONFIG" ]; then
-        write_config "$CONFIG_FILE"
-        exit 0
-    fi
+    [ "$WRITE_CONFIG" ] && write_config "$CONFIG_FILE" && exit 0
 
     trap clean_up EXIT
 
@@ -939,6 +936,8 @@ MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
        SHELL_LIB="$SHELL_LIB"
     COLOR_SCHEME="$COLOR_SCHEME"
 Config_File
+
+    return 0
 }
 #===== Start Here =============================================================
 LIB_PATH="$LIB_PATH:$MY_DIR/../cli-shell-utils:$MY_DIR"
