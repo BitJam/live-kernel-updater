@@ -35,12 +35,11 @@ MIN_LINUXFS_SIZE="100M"
        CPIO_OPTS="-o -H newc --owner root:root --quiet"
        COPY_OPTS="--quiet --count"
        SHELL_LIB="cli-shell-utils.bash"
-        LIB_PATH="/usr/local/lib/shell-utils"
     COLOR_SCHEME="high"
-           K_IFS="|"
 
 #== END_CONFIG
 
+        LIB_PATH="/usr/local/lib/shell-utils"
         WORK_DIR="/run/$ME"
             FIFO="/run/$ME/fifo"
        LOCK_FILE="/run/lock/$ME"
