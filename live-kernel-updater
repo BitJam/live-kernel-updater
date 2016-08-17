@@ -183,14 +183,6 @@ main() {
 
     read_reset_config_file "$CONFIG_FILE"
 
-read_reset_config_file() {
-    local file=${1-%CONFIG_FILE}
-    [ "$IGNORE_CONFIG" ] && return
-    [ "$RESET_CONFIG" ]  && reset_config "$CONFIG_FILE"
-    test -r "$CONFIG_FILE" && . "$CONFIG_FILE"
-    test -e "$CONFIG_FILE" || reset_config "$CONFIG_FILE"
-}
-
     read_all_cmdline_mingled "$@"
     set_colors $COLOR_SCHEME
     check_cmds  CMDS  "$ALL_CMDS"
