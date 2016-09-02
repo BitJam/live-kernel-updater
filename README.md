@@ -1,5 +1,7 @@
 # live-kernel-updater
-Update the kernel on an antiX or MX live-usb or a running live system.
+This is a command line program that updates the kernel on a antiX or MX
+live-usb. It can update a running live-usb or a live-usb that is plugged
+into a host system.
 
 ### Quick Start
 
@@ -13,17 +15,20 @@ Update the kernel on an antiX or MX live-usb or a running live system.
 ## Synopsis
 
 
-This program is CLI only for now.  We try to avoid making your
-live-usb unbootable so you need to install a new kernel and then
-do a remaster before we will attempt to update the live kernel.
-We do this by always looking for new kernels inside of the linuxfs
-file so we know for sure it will be available when you next boot.
+This program is command line only for now.  We try to avoid making your
+live-usb unbootable so you need to install a new kernel and then do a
+remaster before we will attempt to update the live kernel.  We do this
+by always looking for new kernels inside of the linuxfs file so we
+know for sure it will be available when you next boot.
 
 It can update a running live system or a live-usb that you plug
 into any system.  You will be prompted with choices if you don't
 specify what you want to do with command line options.
 
 The log file is at `/var/log/live-kernel-updater.log`.
+
+It will automatically create a config file for itself at
+`/root/.config/live-kernel-updater/live-kernel-updater.conf`.
 
 
 ## Usage
