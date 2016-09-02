@@ -62,8 +62,8 @@ Usage: $ME [options] [command]
 
 Update the kernel on a running antiX/MX live-usb or on an antiX/MX live-usb
 that is plugged into another system.  The new kernel must already be installed.
-You will be prompted for info that is needed but not given in command line
-arguments.
+You will be prompted for information that is needed but was not given in the
+command line arguments.
 
 Commands:
    all         All commands below
