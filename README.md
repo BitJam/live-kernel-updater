@@ -54,11 +54,12 @@ Options:
                                usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
   -h --help             Show this usage
-  -i --initrd=<name>    Name of initrd file (initrd.gz)
-  -I --ignore-config    Ignore the config file
+  -i --initrd=<name>    Name of initrd file (initrd.gz).  If the name has
+                        leading / then treated as full path to alternate initrd
+  -I --ignore-config    Ignore the configuration file
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
-  -p --pretend          Don't run the install commands
+  -p --pretend          Don't actually install the new kernel or initrd.gz
      --pause=<list>     Pause after certain stages of processing:
                             mount
                             unpack
@@ -67,8 +68,9 @@ Options:
                             install
 
   -q --quiet            Print less
+  -R --reset-config     Write fresh config file with defaults options
   -v --verbose          Print more, show commands when run
-  -W --write-config     Write a new config file
+  -W --write-config     Write/update config file preserving current options
 
 Notes:
   - short options stack. Example: -pq instead of -p -q
