@@ -921,7 +921,7 @@ Config_File
 #
 #------------------------------------------------------------------------------
 load_lib() {
-    local file=$1 path=$2
+    local file=$1  path=$2
     unset FOUND_LIB
 
     local dir lib found IFS=:
