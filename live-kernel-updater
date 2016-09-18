@@ -720,7 +720,7 @@ do_install() {
         warn "Target file %s does not exist" "$dest"
     fi
 
-    cmd cp -p "$from" "$dest"
+    cmd cp "$from" "$dest"
 
     local md5_file=$dest$MD5_EXT
     #test -e $md5_file && cmd mv $md5_file $dest$KOLD_EXT$MD5_EXT
