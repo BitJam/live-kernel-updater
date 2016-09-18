@@ -100,7 +100,7 @@ Options:
                             install
 
   -q --quiet            Print less
-  -R --reset-config     Write fresh config file with defaults options
+  -R --reset-config     Write fresh config file with default options
   -v --verbose          Print more, show commands when run
   -W --write-config     Write/update config file preserving current options
 
