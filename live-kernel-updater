@@ -212,9 +212,6 @@ main() {
 
     local root_dir=$SQFS_DIR
 
-    # FIXME When to clear?  When to clean?
-    [ "$CLEAR_WORK" ] && rm -rf "$WORK_DIR"
-
     mkdir -p $WORK_DIR || fatal 120 "Could not make a work directory under /run"
     mount -t tmpfs tmpfs $WORK_DIR || fatal 121 "Could not mount tmpfs at %s" $WORK_DIR
 
