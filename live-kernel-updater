@@ -48,6 +48,7 @@ MIN_LINUXFS_SIZE="100M"
     THE_ERR_FILE="/var/log/$ME.errors"
         LOG_FILE="/dev/null"
         ERR_FILE="/dev/null"
+     CONFIG_FILE="/root/.config/$ME/$ME.conf"
 
         ALL_CMDS="rollback all unpack copy repack install"
        ALL_FORCE="all,flock,clear,compress,usb,umount"
@@ -105,8 +106,11 @@ Options:
   -W --write-config     Write/update config file preserving current options
 
 Notes:
-  - short options stack. Example: -pq instead of -p -q
+  - short options stack. Example: -pq instead of --pretend --quiet
   - options can be intermingled with commands and parameters
+  - config file: $CONFIG_FILE
+  - the config file will be sourced if it exists
+  - it will be created if it doesn't exist
 Usage
     exit $ret
 }
