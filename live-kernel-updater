@@ -241,7 +241,6 @@ main() {
     #----- LIVE-USB -----------------------------------------------------------
     else
 
-        # FIXME? this should never happen now
         fatal_z "$DEVICE" "Must specify a device if not running live"
         usb_dev=$(expand_device $DEVICE)
         fatal_z "$usb_dev" $"Could not find device %s" "$DEVICE"
