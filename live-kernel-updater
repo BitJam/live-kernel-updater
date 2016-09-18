@@ -590,39 +590,6 @@ select_new_kernel() {
     select_kernel_2 "Please select the new kernel from this list" $var "$list"
 }
 
-#------------------------------------------------------------------------------
-# This has been replaced by the update_rollback menu above
-#------------------------------------------------------------------------------
-select_live_target() {
-    local var=$1  list=$2  cnt=$(count_lines "$2")
-
-    fatal_0 $cnt "fixme: something's wrong.  No live kernels were found"
-
-    # FIXME!?!
-    if [ "$DEVICE" = "live"  ]; then
-        local cur_version=$(uname -r)
-        local cur_vm=$(find_kernel_version "$cur_version" "$list")
-        local cur_cnt=$(count_lines "$cur_version")
-        case $cur_cnt in
-            0) warn "No live kernel matches the kernel running now" ;;
-            1) msg  "The kernel running now is in the file %s" "$(get_kernel_fname "$cur_vm")" ;;
-            2) warn "more than one live kernel matches the kernel running now" ;;
-        esac
-    fi
-
-    case $cnt in
-        1) msg "Found one default kernel %s" "$(pq $(get_kernel_fname "$list"))"
-            eval $var=\$list
-            return
-            ;;
-
-        2) ;;
-        *) fatal "More than two live targets were found" ;;
-    esac
-
-    select_kernel_3 "Please select which live kernel you want to replace" $var "$list"
-}
-
 #==============================================================================
 # The Routines that do the "real" work.
 #==============================================================================
