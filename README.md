@@ -38,8 +38,8 @@ Usage: live-kernel-updater [options] [command]
 
 Update the kernel on a running antiX/MX live-usb or on an antiX/MX live-usb
 that is plugged into another system.  The new kernel must already be installed.
-You will be prompted for info that is needed but not given in command line
-arguments.
+You will be prompted for information that is needed but was not given in the
+command line arguments.
 
 Commands:
    all         All commands below
@@ -73,11 +73,14 @@ Options:
                             install
 
   -q --quiet            Print less
-  -R --reset-config     Write fresh config file with defaults options
+  -R --reset-config     Write fresh config file with default options
   -v --verbose          Print more, show commands when run
   -W --write-config     Write/update config file preserving current options
 
 Notes:
-  - short options stack. Example: -pq instead of -p -q
+  - short options stack. Example: -pq instead of --pretend --quiet
   - options can be intermingled with commands and parameters
+  - config file: /root/.config/live-kernel-updater/live-kernel-updater.conf
+  - the config file will be sourced if it exists
+  - it will be created if it doesn't exist
 ```
