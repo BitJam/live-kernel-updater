@@ -4,5 +4,5 @@ Name=Live-Kernel-Updater
 Type=Application
 Comment=Update the kernel on a live system
 Terminal=true
-Exec=gksu /usr/local/bin/live-kernel-updater --pause
+Exec=sudo /usr/local/bin/live-kernel-updater --pause
 Categories=ConsoleOnly;System;
