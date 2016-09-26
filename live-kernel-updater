@@ -52,7 +52,7 @@ MIN_LINUXFS_SIZE="100M"
 
         ALL_CMDS="rollback all unpack copy repack install"
        ALL_FORCE="all,flock,clear,compress,usb,umount"
-       ALL_PAUSE="all,fifo,mount,unpack,copy,repack,clean"
+       ALL_PAUSE="all,fifo,mount,unpack,copy,repack,clean,exit"
 
         LIB_PATH="$MY_LIB_DIR:$LIB_DIR"
             PATH="$MY_LIB_DIR/bin:$LIB_DIR/bin:$PATH"
@@ -79,7 +79,6 @@ Commands:
 Options:
   -a --auto             Non-interactive.  Always assume the safe answer
      --color=<xxx>      Set color scheme to off|low|high
-  -D --debug            Pause before cleaning up
   -d --device=<device>  live-usb device to update the kernel on
                         (use "live" to force updating a running live system)
   -F --force=XXXX       Force the options specfied:
@@ -92,14 +91,8 @@ Options:
   -I --ignore-config    Ignore the configuration file
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
+     --pause            Wait for user input before existing
   -p --pretend          Don't actually install the new kernel or initrd.gz
-     --pause=<list>     Pause after certain stages of processing:
-                            mount
-                            unpack
-                            copy
-                            repack
-                            install
-
   -q --quiet            Print less
   -R --reset-config     Write fresh config file with default options
   -v --verbose          Print more, show commands when run
@@ -123,7 +116,6 @@ eval_argument() {
              -color=*)  COLOR_SCHEME=$val               ;;
             -device|d)  DEVICE=$val                     ;;
             -device=*)  DEVICE=$val                     ;;
-             -debug|D)  DEBUG=true                      ;;
              -force|F)  FORCE="$FORCE${FORCE:+,}$val"   ;;
              -force=*)  FORCE="$FORCE${FORCE:+,}$val"   ;;
 #               -fifo)  FIFO_MODE=true                  ;;
@@ -134,8 +126,8 @@ eval_argument() {
             -kernel=*)  NEW_KERNEL=$val                 ;;
           -keep-old|K)  KEEP_OLD=true                   ;;
            -pretend|p)  PRETEND_MODE=true ;             ;;
-               -pause)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
-             -pause=*)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
+               -pause)  PAUSE="$PAUSE${PAUSE:+,}exit"   ;;
+        -pause-list=*)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
              -quiet|q)  QUIET=true                      ;;
            -verbose|v)  BE_VERBOSE=true                 ;;
 
@@ -153,6 +145,7 @@ eval_early_argument() {
       -ignore-config|I) IGNORE_CONFIG=true    ;;
        -reset-config|R)  RESET_CONFIG=true    ;;
        -write-config|W)  WRITE_CONFIG=true    ;;
+                -pause)  PAUSE="$PAUSE${PAUSE:+,}exit" ;;
                -help|h) usage                 ;;
     esac
 }
@@ -171,7 +164,6 @@ takes_param() {
           -initrd|i) return 0 ;;
            -force|F) return 0 ;;
           -kernel|k) return 0 ;;
-             -pause) return 0 ;;
     esac
     return 1
 }
@@ -792,11 +784,7 @@ my_done() {
 my_exit() {
     local ret=${1:-0}
 
-    if [ "$DEBUG" ]; then
-        #echo -n "${green}Press <Enter>$nc_co "
-        msg "debug shell"
-        bash -I
-    fi
+    pause exit $"Exit"
 
     #Msg "=> cleaning up"
     exit $ret
