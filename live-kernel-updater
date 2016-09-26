@@ -197,6 +197,7 @@ main() {
 
     : ${CMDS:=all}
 
+    msg $"Starting %s" "$ME"
     start_log "$orig_args"
 
     #[ "$FIFO_MODE" -a "$AUTO_MODE" ] && fatal "Cannot select both %s and %s" "--fifo" "--auto"
