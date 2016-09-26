@@ -51,7 +51,6 @@ Commands:
 Options:
   -a --auto             Non-interactive.  Always assume the safe answer
      --color=<xxx>      Set color scheme to off|low|high
-  -D --debug            Pause before cleaning up
   -d --device=<device>  live-usb device to update the kernel on
                         (use "live" to force updating a running live system)
   -F --force=XXXX       Force the options specfied:
@@ -64,14 +63,8 @@ Options:
   -I --ignore-config    Ignore the configuration file
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
+     --pause            Wait for user input before existing
   -p --pretend          Don't actually install the new kernel or initrd.gz
-     --pause=<list>     Pause after certain stages of processing:
-                            mount
-                            unpack
-                            copy
-                            repack
-                            install
-
   -q --quiet            Print less
   -R --reset-config     Write fresh config file with default options
   -v --verbose          Print more, show commands when run
