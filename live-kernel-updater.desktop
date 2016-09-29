@@ -1,6 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Name=Live-Kernel-Updater
+Icon=drive-removable-media-usb
 Type=Application
 Comment=Update the kernel on a live system
 Terminal=true
