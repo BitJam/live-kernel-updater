@@ -276,7 +276,7 @@ main() {
     find_live_boot_dir rel_live_dir "$live_mp" "$LINUXFS_NAME" \
         || fatal $"No '%s' found in any directory in '%s'" "$LINUXFS_NAME" "$live_mp"
 
-    local full_live_dir=$live_mp/$rel_live_dir
+    local full_live_dir=$live_mp/${rel_live_dir#/}
 
     check_writable "$full_live_dir" "live boot"
 
