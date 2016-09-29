@@ -217,8 +217,8 @@ main() {
         we_are_live=true
         # FIXME: should use initrd.out to get the uuid, etc
         live_dev=$(get_live_dev)
-        fatal_z "$live_dev" "Live system detected but could not find the live boot device"
-        msg "Current running kernel is %s" "$(pq $(uname -r))"
+        fatal_z "$live_dev" $"Live system detected but could not find the live boot device"
+        msg $"Current running kernel is %s" "$(pq $(uname -r))"
     fi
 
     #==============================================================================
@@ -231,9 +231,9 @@ main() {
 
     #----- RUNNING LIVE -------------------------------------------------------
     if [ "$DEVICE" = "live" ]; then
-        fatal_z "$we_are_live" "This is not a live-usb system"
+        fatal_z "$we_are_live" $"This is not a live-usb system"
         live_mp=$LIVE_MP
-        msg "Will use running live system"
+        msg $"Will use running live system"
 
     #----- LIVE-USB -----------------------------------------------------------
     else
@@ -263,7 +263,7 @@ main() {
         umount_all $usb_drive
 
         my_mount $usb_dev $USB_DIR
-        msg "Will use live-usb device %s" "$(pq $usb_dev)"
+        msg $"Will use live-usb device %s" "$(pq $usb_dev)"
         live_mp=$USB_DIR
     fi
 
@@ -290,15 +290,15 @@ main() {
         break
     done
 
-    fatal_z "$linuxfs_name" "Could not find '%s' or '%s' on the live-usb" \
+    fatal_z "$linuxfs_name" $"Could not find '%s' or '%s' on the live-usb" \
         $(pqh "$LINUXFS_NAME$NEW_EXT") $(pqh "$LINUXFS_NAME")
 
     local live_remaster
     if [ -z "${linuxfs_name%%*$NEW_EXT}" ]; then
         live_remaster=true
-        msg "Found %s file %s in directory %s" $(pq live-remaster) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
+        msg $"Found %s file %s in directory %s" $(pq live-remaster) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
     else
-        msg "Found %s file %s in directory %s" $(pq linuxfs) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
+        msg $"Found %s file %s in directory %s" $(pq linuxfs) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
     fi
 
     # Fix me?
@@ -315,7 +315,7 @@ main() {
     else
         full_initrd="$full_live_dir/$INITRD_NAME"
     fi
-    test -e "$full_initrd" || fatal "Could not find initrd file: %s" "$full_initrd"
+    test -e "$full_initrd" || fatal $"Could not find initrd file: %s" "$full_initrd"
 
     # default live kernels: vmlinuz and vmlinuz1
     local both_vm=$VMLINUZ_NAME
@@ -342,24 +342,24 @@ main() {
     #msg_1 "$vm_cnt"  "Found one default kernel %s" "$(pq $(get_kernel_fname "$live_vm"))"
 
     msg "Found:"
-    msg_kernel "$live_all"  "total live kernel"       "total live kernels"
-    msg_kernel "$live_vm"   "default live kernel"     "default live kernels"
-    msg_kernel "$live_old"  "old live kernel"         "old live kernels"
+    msg_kernel "$live_all"  $"total live kernel"       $"total live kernels"
+    msg_kernel "$live_vm"   $"default live kernel"     $"default live kernels"
+    msg_kernel "$live_old"  $"old live kernel"         $"old live kernels"
     msg
-    msg_kernel "$boot_all"  "total installed kernel"  "total installed kernels"
-    msg_kernel "$boot_new"  "new installed kernel"    "new installed kernels"
+    msg_kernel "$boot_all"  $"total installed kernel"  $"total installed kernels"
+    msg_kernel "$boot_new"  $"new installed kernel"    $"new installed kernels"
 
-    show_kernel_3 "Live kernels:" "$live_all" | strip_color >> $LOG_FILE
-    show_kernel_3 "Boot kernels:" "$boot_all" | strip_color >> $LOG_FILE
+    show_kernel_3 $"Live kernels:" "$live_all" | strip_color >> $LOG_FILE
+    show_kernel_3 $"Boot kernels:" "$boot_all" | strip_color >> $LOG_FILE
 
     case $new_cnt in
         0) ;;
-        1) log_it show_kernel_2 "Only one new installed kernel found:" "$boot_new" ;;
-        *) log_it show_kernel_2 "New installed kernels:" "$boot_new" ;;
+        1) log_it show_kernel_2 $"Only one new installed kernel found:" "$boot_new" ;;
+        *) log_it show_kernel_2 $"New installed kernels:" "$boot_new" ;;
     esac
 
     if [ $new_cnt -gt $MAX_FILES ]; then
-        warn "There are %s new kernels.  Only showing the most recent %s." "$new_cnt" "$MAX_FILES"
+        warn $"There are %s new kernels.  Only showing the most recent %s." "$new_cnt" "$MAX_FILES"
         boot_new=$(echo "$boot_new" | grep . | head -n $MAX_FILES)
     fi
 
@@ -428,7 +428,7 @@ main() {
     fi
 
     msg
-    Shout "Ready to make the following live kernel %s:" "$action_name"
+    Shout $"Ready to make the following live kernel %s:" "$action_name"
     log_it echo "$stat_info"
 
     YES_no_pretend || my_exit
@@ -506,13 +506,13 @@ select_live_usb_device() {
     local menu=$(cli_drive_menu "$live_dev")
 
     if [ "$live_dev" ]; then
-        local title=$(printf "The current Live System on %s" "$(pq $live_dev)")
+        local title=$(printf $"The current Live System on %s" "$(pq $live_dev)")
         menu=$(printf "live$P_IFS$m_co%s$nc_co\n%s" "$title" "$menu")
     fi
 
-    fatal_0 $(count_lines "$menu") "usb" "The system is not live and no usb drives were detected"
+    fatal_0 $(count_lines "$menu") "usb" $"The system is not a live-usb and no usb drives were detected"
 
-    my_select_quit "$var" "Please select the system to upgrade" "$menu"
+    my_select_quit "$var" $"Please select the system to upgrade" "$menu"
 }
 
 #------------------------------------------------------------------------------
@@ -548,9 +548,9 @@ Old_VM
     menu=$(echo -e "$menu")
 
     local cnt=$(count_lines "$menu")
-    fatal_0 "$cnt" "No update or rollback actions are available"
+    fatal_0 "$cnt" $"No update or rollback actions are available"
 
-    my_select_quit $var "Please select an action to perform" "$menu"
+    my_select_quit $var $"Please select an action to perform" "$menu"
 }
 
 #------------------------------------------------------------------------------
@@ -561,7 +561,7 @@ Old_VM
 select_new_kernel() {
     local var=$1  cmd_version=$2  list=$3  cnt=$(count_lines "$3")
 
-    fatal_0 $cnt "Did not find any new kernels in the boot directory"
+    fatal_0 $cnt $"Did not find any new kernels in the boot directory"
 
     if [ ${#cmd_version} -gt 0 ]; then
         local cmd_kernel=$(find_kernel_version "$cmd_version" "$list")
@@ -569,7 +569,7 @@ select_new_kernel() {
         case $cmd_cnt in
             0) fatal "No new kernels match the requested version %s" "$cmd_version" ;;
 
-            1) msg "Found one kernel matching the requested version %s" "$(pq $cmd_version)"
+            1) msg $"Found one kernel matching the requested version %s" "$(pq $cmd_version)"
                eval "$var=\$list"
                return ;;
 
@@ -578,13 +578,13 @@ select_new_kernel() {
     fi
 
     case $cnt in
-        1)  msg "Found one new kernel %s" "$(pq $(get_kernel_version $list))"
+        1)  msg $"Found one new kernel %s" "$(pq $(get_kernel_version $list))"
             eval "$var=\$list"
             return ;;
     esac
     echo
 
-    select_kernel_2 "Please select the new kernel from this list" $var "$list"
+    select_kernel_2 $"Please select the new kernel from this list" $var "$list"
 }
 
 #==============================================================================
@@ -653,7 +653,7 @@ repack_initrd() {
     (cd "$dir" && find . | cpio $CPIO_OPTS) > $cpio_file \
         || fatal "Could not create a cpio archive"
 
-    msg "Compressing ..."
+    msg $"Compressing ..."
     $compress $args < "$cpio_file" > "$file" || fatal "Compression (%s) failed" $compress
 }
 
@@ -665,7 +665,7 @@ do_install() {
     local from=$1  dest=$2
     test -f "$from" || fatal "Installation file %s does not exist" "$from"
 
-    msg "install %s" "$(pq $(basename $dest))"
+    msg $"install %s" "$(pq $(basename $dest))"
     #msg "install %s --> %s" "$from" "$dest"
 
     if test -e "$dest"; then
@@ -674,10 +674,10 @@ do_install() {
             # msg "backing up %s to %s" "$(pq $(basename "$dest"))" "$(pq $(basename "$backup"))"
             cmd mv "$dest" "$backup"
         else
-            warn "Overwriting backup"
+            warn $"Overwriting backup"
         fi
     else
-        warn "Target file %s does not exist" "$dest"
+        warn $"Target file %s does not exist" "$dest"
     fi
 
     cmd cp "$from" "$dest"
@@ -706,14 +706,14 @@ do_rollback() {
     local bad_vmlinuz="$the_vmlinuz$KBAD_EXT"
 
 
-    test -e "$old_vmlinuz" || fatal "Could not find old %s file to roll back" "$vmlinuz$K_OLD"
-    test -e "$old_initrd"  || fatal "Could not find old %s file to roll back" "$initrd$K_OLD"
+    test -e "$old_vmlinuz" || fatal $"Could not find old %s file to roll back" "$vmlinuz$K_OLD"
+    test -e "$old_initrd"  || fatal $"Could not find old %s file to roll back" "$initrd$K_OLD"
 
-    msg "Roll back %s to %s" "$(pq $(basename "$old_initrd"))" "$(pq $initrd)"
+    msg $"Roll back %s to %s" "$(pq $(basename "$old_initrd"))" "$(pq $initrd)"
     cmd mv "$the_initrd" "$bad_initrd"
     cmd mv "$old_initrd" "$the_initrd"
 
-    msg "Roll back %s to %s" "$(pq $(basename "$old_vmlinuz"))" "$(pq $vmlinuz)"
+    msg $"Roll back %s to %s" "$(pq $(basename "$old_vmlinuz"))" "$(pq $vmlinuz)"
     cmd mv "$the_vmlinuz" "$bad_vmlinuz"
     cmd mv "$old_vmlinuz" "$the_vmlinuz"
 
