@@ -319,7 +319,7 @@ main() {
 
     # default live kernels: vmlinuz and vmlinuz1
     local both_vm=$VMLINUZ_NAME
-    [ -n "$sVMLINUZ_2_NAME" ] && both_vm="$both_vm|$VMLINUZ_2_NAME"
+    [ -n "$VMLINUZ_2_NAME" ] && both_vm="$both_vm|$VMLINUZ_2_NAME"
 
     local live_all boot_all
     get_all_kernel live_all "$full_live_dir"                          # all in live dir
