@@ -191,6 +191,15 @@ main() {
     check_cmds  CMDS  "$ALL_CMDS"
     check_force FORCE "$ALL_FORCE"
     check_pause PAUSE "$ALL_PAUSE"
+
+    local new_initrd
+    if [ ${#CMD_INITRD} -gt 0 ]; then
+        test -f "$CMD_INITRD" || fatal "The initrd file '%s' was not found" "$CMD_INITRD"
+        new_initrd=true
+    fi
+
+    local template_initrd=${CMD_INITRD:=$TEMPLATE_INITRD}
+
     need_prog $VM_VERSION_PROG copy-initrd-modules
 
     [ "$WRITE_CONFIG" ] && write_config "$CONFIG_FILE" && exit 0
@@ -311,14 +320,15 @@ main() {
 
     pause mount
 
-    local full_initrd
-    if [ ${#INITRD_NAME} -eq 0 ]; then
+    local full_initrd targ_initrd="$full_live_dir/$INITRD_NAME"
+    if [ "$new_initrd" ]; then
+        full_initrd=$CMD_INITRD
+    elif [ ${#INITRD_NAME} -eq 0 ]; then
         fatal "An empty initrd name was given"
-    elif [ -z "${INITRD_NAME##/*}" ]; then
-        full_initrd=$INITRD_NAME
     else
-        full_initrd="$full_live_dir/$INITRD_NAME"
+        full_initrd=$targ_initrd
     fi
+
     test -e "$full_initrd" || fatal $"Could not find initrd file: %s" "$full_initrd"
 
     # default live kernels: vmlinuz and vmlinuz1
@@ -372,22 +382,31 @@ main() {
     fatal_k0 "$live_all"  $"No kernels found in the live boot directory"
 
     if [ $new_cnt -eq 0 ]; then
-        error $"No new kernels were found"
-        fatal $"You must install a kernel and then remaster before a kernel upgrade"
+        if test -f "$template_initrd" ; then
+            msg
+            warn $"No new kernels were found"
+            msg $"Can only update the initrd file"
+        else
+            error $"No new kernels were found and there's no template initrd file"
+            fatal $"You must install a kernel and then remaster before a kernel upgrade"
+        fi
     fi
 
     #==============================================================================
     # The Second Menu
     #==============================================================================
-    local action_target
-    select_update_rollback_action action_target "$live_vm" "$live_old" "$new_cnt"
+    local action_target=initrd@$CMD_INITRD
+    [ "$new_initrd" ] \
+        || select_update_rollback_action action_target "$live_vm" "$live_old" "$new_cnt" "$template_initrd"
+
     local action=${action_target%@*}
     local target_fname=${action_target#*@}
 
+    local new_kernel new_version new_fname stat_list action_name blurb
+    local initrd_only new_mod_versions
     #----- Update Action -------------------------------------------------------------------------
-    local new_kernel new_version new_fname stat_list action_name stat_info
     if [ "$action" = "update" ]; then
-        action_name=$"update"
+        action_name=$"live kernel update"
 
         target=$(find_kernel_fname "$target_fname" "$live_vm")
         local target_version=$(get_kernel_version "$target")
@@ -404,13 +423,13 @@ main() {
         test -d $root_dir/lib/modules/$new_version \
             || fatal "Missing modules directory for kernel '%s'" "$new_version"
 
-        stat_info=$(kernel_stats \
+        blurb=$(kernel_stats \
             $"Current" "$target_version" "$target_date" "$target_fname" "$target_fname$KOLD_EXT" \
             $"New"     "$new_version"    "$new_date"    $"(new)"        "$target_fname")
 
     #---- Rollback Action ---------------------------------------------------------
     elif [ "$action" = "rollback" ]; then
-        action_name=$"rollback"
+        action_name=$" live kernel rollback"
         target=$(find_kernel_fname "$target_fname" "$live_vm")
         local target_version=$(get_kernel_version "$target")
         local target_date=$(get_kernel_date "$target")
@@ -423,17 +442,27 @@ main() {
         test -d $root_dir/lib/modules/$new_version \
             || fatal "Missing modules directory for kernel '%s'" "$new_fname"
 
-        stat_info=$(kernel_stats \
+        blurb=$(kernel_stats \
             $"Current" "$target_version" "$target_date" "$target_fname"          "$target_fname$KBAD_EXT" \
             $"Old"     "$new_version"    "$new_date"    "$target_fname$KOLD_EXT" "$target_fname")
 
+    #---- Update Initrd Action ----------------------------------------------------
+    elif [ "$action" = "initrd" ]; then
+        action_name=$"live initrd update"
+        initrd_only=true
+        new_mod_versions=$(get_kernel_version "$live_both")
+        local blurb_fmt="$m_co%s: %s"
+        blurb=$(printf "$blurb_fmt" $"Update initrd using file" "$(pq "$target_fname")")
+
     else
-        fatal "Internal error.  Unknown action %s" "$action"
+        fatal "Internal error.  Unknown action: %s" "$action"
     fi
 
+    : ${new_mod_versions:=$new_version}
+
     msg
-    Shout $"Ready to make the following live kernel %s:" "$action_name"
-    log_it echo "$stat_info"
+    Shout $"Ready to make the following %s:" "$action_name"
+    log_it echo "$blurb"
 
     YES_no_pretend || my_exit
 
@@ -443,7 +472,7 @@ main() {
     fi
 
     local initrd_dir=$WORK_DIR/initrd
-    local tmp_initrd_file="$WORK_DIR/$(basename $full_initrd).tmp"
+    local tmp_initrd_file="$WORK_DIR/$(basename $INITRD_NAME).tmp"
     local compression_file="$WORK_DIR/compression"
     local cpio_files="$WORK_DIR/cpio.{in,out}"
 
@@ -473,11 +502,13 @@ main() {
 
     pause unpack
 
-    if need copy; then
-        always_cmd \
-            copy-initrd-modules $COPY_OPTS --from="$root_dir" --to="$initrd_dir" --kernel="$new_version" \
-            || fatal "Copy initrd modules failed"
+    if [ "$initrd_only" ]; then
+        prep_template_initrd "$root_dir" "$initrd_dir"
+    else
+        remove_old_mods $initrd_dir $target_version
     fi
+
+    need copy && copy_modules "$root_dir" "$initrd_dir" $new_mod_versions
 
     pause copy
 
@@ -485,8 +516,12 @@ main() {
     pause repack
 
     if need install; then
-        do_install "$tmp_initrd_file" "$full_initrd"
-        do_install "$full_boot_dir/$new_fname" "$full_live_dir/$target_fname"
+        if [ "$initrd_only" ]; then
+            do_install "$tmp_initrd_file" "$targ_initrd"  "$IOLD_EXT"
+        else
+            do_install "$tmp_initrd_file" "$targ_initrd"
+            do_install "$full_boot_dir/$new_fname" "$full_live_dir/$target_fname"
+        fi
     fi
     pause install
 
@@ -524,13 +559,15 @@ select_live_usb_device() {
 # and which vmlinuz file (vmlinuz or vmlinuz1) to perform it on.
 #------------------------------------------------------------------------------
 select_update_rollback_action() {
-    local var=$1  live_vm=$2  old_vm=$3  new_cnt=$4  orig_ifs=$IFS
+    local var=$1  live_vm=$2  old_vm=$3  new_cnt=$4  initrd=$5  orig_ifs=$IFS
     IFS=$K_IFS
 
     # FIXME: go through twice to get widths?
     local fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s %s ($date_co%s$nc_co)\n"
-    local live_k  action='update' what=$"Update"
+    local live_k  action  what
+
     if [ $new_cnt -gt 0 ]; then
+        action=update; what=$"Update"
         while read version fname date; do
             [ ${#version} -eq 0 ] && continue
             menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"from" "$(vq $version)" "$date")\n"
@@ -538,7 +575,8 @@ select_update_rollback_action() {
 $(echo "$live_vm")
 Live_VM
     fi
-    action="rollback" what=$"Rollback"
+
+    action="rollback" ; what=$"Rollback"
     fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s %s ($date_co%s$nc_co)\n"
      while read version fname date; do
         [ ${#version} -eq 0 ] && continue
@@ -547,6 +585,9 @@ Live_VM
     done <<Old_VM
 $(echo "$old_vm")
 Old_VM
+
+    [ ${#initrd} -gt 0 ] && test -f "$initrd" \
+        && menu="$menu$(printf "%s$P_IFS%s %s" "initrd@$initrd" $"Update initrd from" "$(pq "$initrd")")\n"
 
     IFS=$orig_ifs
     menu=$(echo -e "$menu")
@@ -629,6 +670,39 @@ unpack_initrd() {
 }
 
 #------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+prep_template_initrd() {
+    local from=$1  to=$2
+    local from_release=$from/etc/initrd-release
+    test -e "$from_release" && always_cmd cp "$from_release" "$to/etc"
+
+    local mod_dir="$to/lib/modules"
+    test -e "$mod_dir" && always_cmd rm -r "$mod_dir"
+}
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+remove_old_mods() {
+    local root=$1  kernel=$2
+    local dir=$root/lib/modules/$kernel
+    test -d "$dir" || return
+    always_cmd rm -r "$dir"
+}
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+copy_modules() {
+    local from=$1  to=$2  version
+    shift 2
+
+    for version; do
+        always_cmd copy-initrd-modules $COPY_OPTS --from="$from" --to="$to" --kernel="$version" \
+            || fatal "Copy initrd modules failed for %s" "$version"
+    done
+}
+#------------------------------------------------------------------------------
 # Pretty much the inverse of unpack_initrd().  We leave everything in the work
 # directory until we do the actual install.
 #------------------------------------------------------------------------------
@@ -666,15 +740,15 @@ repack_initrd() {
 # also makes an md5sum of the new file.
 #------------------------------------------------------------------------------
 do_install() {
-    local from=$1  dest=$2
+    local from=$1  dest=$2 old_ext=${3:-$KOLD_EXT}
     test -f "$from" || fatal "Installation file %s does not exist" "$from"
 
     msg $"install %s" "$(pq $(basename $dest))"
     #msg "install %s --> %s" "$from" "$dest"
 
     if test -e "$dest"; then
-        if [ -n "${dest%%*$KOLD_EXT}" ]; then
-            local backup="$dest$KOLD_EXT"
+        if [ -n "${dest%%*$old_ext}" ]; then
+            local backup="$dest$old_ext"
             # msg "backing up %s to %s" "$(pq $(basename "$dest"))" "$(pq $(basename "$backup"))"
             cmd mv "$dest" "$backup"
         else
@@ -687,7 +761,7 @@ do_install() {
     cmd cp "$from" "$dest"
 
     local md5_file=$dest$MD5_EXT
-    #test -e $md5_file && cmd mv $md5_file $dest$KOLD_EXT$MD5_EXT
+    #test -e $md5_file && cmd mv $md5_file $dest$old_ext$MD5_EXT
     local md5_sum=$(cd $(dirname $dest) && md5sum $(basename $dest))
     cmd write_file "$md5_file" "$md5_sum"
 }
@@ -853,11 +927,15 @@ write_config() {
     VMLINUZ_NAME="$VMLINUZ_NAME"
   VMLINUZ_2_NAME="$VMLINUZ_2_NAME"
      INITRD_NAME="$INITRD_NAME"
+ TEMPLATE_INITRD="$TEMPLATE_INITRD"
+
 MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
 
         # for kernel and initrd.gz files
         KOLD_EXT="$KOLD_EXT"
         KBAD_EXT="$KBAD_EXT"
+        IOLD_EXT="$IOLD_EXT"
+        IBAD_EXT="$IBAD_EXT"
          MD5_EXT="$MD5_EXT"
 
         # For linuxfs file (right after a remaster)
