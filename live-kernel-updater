@@ -90,7 +90,8 @@ Options:
                                usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
   -h --help             Show this usage
-  -i --initrd=<name>    Name of initrd file ($INITRD_NAME).  If the name has
+  -i --initrd           Only update the initrd using file: $TEMPLATE_INITRD
+     --initrd=<file>    Only update the initrd using file <file>
                         leading / then treated as full path to alternate initrd
   -I --ignore-config    Ignore the configuration file
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
@@ -124,8 +125,8 @@ eval_argument() {
              -force=*)  FORCE="$FORCE${FORCE:+,}$val"   ;;
 #               -fifo)  FIFO_MODE=true                  ;;
               -help|h)  usage                           ;;
-            -initrd|i)  CMD_INITRD=$val                 ;;
-            -initrd=*)  CMD_INITRD=$val                 ;;
+            -initrd|i)  CMD_INITRD=$TEMPLATE_INITRD     ;;
+            -initrd=*)  CMD_INITRD=${arg#*=}            ;;
             -kernel|k)  NEW_KERNEL=$val                 ;;
             -kernel=*)  NEW_KERNEL=$val                 ;;
           -keep-old|K)  KEEP_OLD=true                   ;;
@@ -165,7 +166,6 @@ takes_param() {
     case $1 in
              -color) return 0 ;;
           -device|d) return 0 ;;
-          -initrd|i) return 0 ;;
            -force|F) return 0 ;;
           -kernel|k) return 0 ;;
     esac
