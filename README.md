@@ -58,7 +58,8 @@ Options:
                                usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
   -h --help             Show this usage
-  -i --initrd=<name>    Name of initrd file (initrd.gz).  If the name has
+  -i --initrd           Only update the initrd using file: /usr/lib/iso-template/template-initrd.gz
+     --initrd=<file>    Only update the initrd using file <file>
                         leading / then treated as full path to alternate initrd
   -I --ignore-config    Ignore the configuration file
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
