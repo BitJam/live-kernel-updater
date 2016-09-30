@@ -384,8 +384,9 @@ main() {
     if [ $new_cnt -eq 0 ]; then
         if test -f "$template_initrd" ; then
             msg
-            warn $"No new kernels were found"
+            msg $"No new kernels were found"
             msg $"Can only update the initrd file"
+            msg $"You must install a kernel and then remaster before a kernel upgrade"
         else
             error $"No new kernels were found and there's no template initrd file"
             fatal $"You must install a kernel and then remaster before a kernel upgrade"
