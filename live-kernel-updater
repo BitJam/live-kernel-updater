@@ -19,11 +19,15 @@ MY_LIB_DIR=$(readlink -f "$MY_DIR/../cli-shell-utils")
     VMLINUZ_NAME="vmlinuz"
   VMLINUZ_2_NAME="vmlinuz1"
      INITRD_NAME="initrd.gz"
+ TEMPLATE_INITRD="/usr/lib/iso-template/template-initrd.gz"
+
 MIN_LINUXFS_SIZE="100M"
 
         # for kernel and initrd.gz files
         KOLD_EXT=".kold"
         KBAD_EXT=".kbad"
+        IOLD_EXT=".iold"
+        IBAD_EXT=".ibad"
          MD5_EXT=".md5"
 
         # For linuxfs file (right after a remaster)
