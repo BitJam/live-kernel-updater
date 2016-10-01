@@ -506,7 +506,7 @@ main() {
     if [ "$initrd_only" ]; then
         prep_template_initrd "$root_dir" "$initrd_dir"
     else
-        remove_old_mods $initrd_dir $target_version
+        [ "$KEEP_OLD" ] || remove_old_mods $initrd_dir $target_version
     fi
 
     need copy && copy_modules "$root_dir" "$initrd_dir" $new_mod_versions
@@ -688,8 +688,12 @@ prep_template_initrd() {
 remove_old_mods() {
     local root=$1  kernel=$2
     local dir=$root/lib/modules/$kernel
-    test -d "$dir" || return
-    always_cmd rm -r "$dir"
+
+    if test -d "$dir"; then
+        always_cmd rm -r "$dir"
+    else
+        warn "Module directory for old kernel '%s' not found" "$kernel"
+    fi
 }
 #------------------------------------------------------------------------------
 #
