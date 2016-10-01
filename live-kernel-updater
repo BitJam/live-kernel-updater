@@ -628,7 +628,6 @@ select_new_kernel() {
             eval "$var=\$list"
             return ;;
     esac
-    echo
 
     select_kernel_2 $"Please select the new kernel from this list" $var "$list"
 }
