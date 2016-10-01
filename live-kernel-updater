@@ -588,7 +588,7 @@ $(echo "$old_vm")
 Old_VM
 
     [ ${#initrd} -gt 0 ] && test -f "$initrd" \
-        && menu="$menu$(printf "%s$P_IFS%s %s" "initrd@$initrd" $"Update initrd from" "$(pq "$initrd")")\n"
+        && menu="$menu$(printf "%s$P_IFS%s %s" "initrd@$initrd" $"Update initrd using file" "$(pq "$initrd")")\n"
 
     IFS=$orig_ifs
     menu=$(echo -e "$menu")
