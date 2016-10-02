@@ -210,6 +210,7 @@ main() {
 
     : ${CMDS:=all}
 
+    # starting <program name>
     msg $"Starting %s" "$ME"
     start_log "$orig_args"
 
@@ -287,7 +288,7 @@ main() {
     # local full_live_dir=$live_mp/${LIVE_DIR#/}
     local full_live_dir rel_live_dir
     find_live_boot_dir rel_live_dir "$live_mp" "$LINUXFS_NAME" \
-        || fatal $"No '%s' found in any directory in '%s'" "$LINUXFS_NAME" "$live_mp"
+        || fatal $"No '%s' file found in any directory in '%s'" "$LINUXFS_NAME" "$live_mp"
 
     local full_live_dir=$live_mp/${rel_live_dir#/}
 
@@ -303,12 +304,14 @@ main() {
         break
     done
 
+    # Could not find '<linuxfs.new>' or '<linuxfs>' on the live-usb
     fatal_z "$linuxfs_name" $"Could not find '%s' or '%s' on the live-usb" \
         $(pqh "$LINUXFS_NAME$NEW_EXT") $(pqh "$LINUXFS_NAME")
 
     local live_remaster
     if [ -z "${linuxfs_name%%*$NEW_EXT}" ]; then
         live_remaster=true
+        # Found <linuxfs> file in directory antiX
         msg $"Found %s file %s in directory %s" $(pq live-remaster) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
     else
         msg $"Found %s file %s in directory %s" $(pq linuxfs) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
@@ -352,15 +355,18 @@ main() {
     local boot_new=$(find_kernel_version "$live_versions" "$boot_all" -v)
     local new_cnt=$(count_lines "$boot_new")
 
-    #msg_1 "$new_cnt" "Found one new kernel %s"     "$(pq $(get_kernel_version $boot_new))"
-    #msg_1 "$vm_cnt"  "Found one default kernel %s" "$(pq $(get_kernel_fname "$live_vm"))"
-
-    msg "Found:"
+    # [a table of what was found will follow]
+    msg $"Found:"
+    # singular and plural: 1 total live kernel
     msg_kernel "$live_all"  $"total live kernel"       $"total live kernels"
+    # singular and plural
     msg_kernel "$live_vm"   $"default live kernel"     $"default live kernels"
+    # singular and plural
     msg_kernel "$live_old"  $"old live kernel"         $"old live kernels"
     msg
+    # singular and plural
     msg_kernel "$boot_all"  $"total installed kernel"  $"total installed kernels"
+    # singular and plural
     msg_kernel "$boot_new"  $"new installed kernel"    $"new installed kernels"
 
     show_kernel_3 $"Live kernels:" "$live_all" | strip_color >> $LOG_FILE
@@ -368,7 +374,7 @@ main() {
 
     case $new_cnt in
         0) ;;
-        1) log_it show_kernel_2 $"Only one new installed kernel found:" "$boot_new" ;;
+        1) log_it show_kernel_2 $"Only one new installed kernel was found:" "$boot_new" ;;
         *) log_it show_kernel_2 $"New installed kernels:" "$boot_new" ;;
     esac
 
@@ -377,19 +383,18 @@ main() {
         boot_new=$(echo "$boot_new" | grep . | head -n $MAX_FILES)
     fi
 
-    fatal_k0 "$boot_all" $"No kernels found in the boot directory"
-    #fatal_k0 "$boot_mod" $"No valid kernels found in the boot directory"
-    fatal_k0 "$live_all"  $"No kernels found in the live boot directory"
+    fatal_k0 "$boot_all" $"No kernels were found in the boot directory"
+    fatal_k0 "$live_all" $"No kernels were found in the live boot directory"
 
     if [ $new_cnt -eq 0 ]; then
         if test -f "$template_initrd" ; then
             msg
             msg $"No new kernels were found"
             msg $"Can only update the initrd file"
-            msg $"You must install a kernel and then remaster before a kernel upgrade"
+            msg $"You must install a kernel and then remaster before doing a kernel update"
         else
             error $"No new kernels were found and there's no template initrd file"
-            fatal $"You must install a kernel and then remaster before a kernel upgrade"
+            fatal $"You must install a kernel and then remaster before doing a kernel update"
         fi
     fi
 
@@ -424,13 +429,14 @@ main() {
         test -d $root_dir/lib/modules/$new_version \
             || fatal "Missing modules directory for kernel '%s'" "$new_version"
 
+        # Current kernel and New/Old kernel specs
         blurb=$(kernel_stats \
             $"Current" "$target_version" "$target_date" "$target_fname" "$target_fname$KOLD_EXT" \
             $"New"     "$new_version"    "$new_date"    $"(new)"        "$target_fname")
 
     #---- Rollback Action ---------------------------------------------------------
     elif [ "$action" = "rollback" ]; then
-        action_name=$" live kernel rollback"
+        action_name=$"live kernel rollback"
         target=$(find_kernel_fname "$target_fname" "$live_vm")
         local target_version=$(get_kernel_version "$target")
         local target_date=$(get_kernel_date "$target")
@@ -453,6 +459,7 @@ main() {
         initrd_only=true
         new_mod_versions=$(get_kernel_version "$live_both")
         local blurb_fmt="$m_co%s: %s"
+        # Update initrd using file <filename> [NOTE: no "%s" here!]
         blurb=$(printf "$blurb_fmt" $"Update initrd using file" "$(pq "$target_fname")")
 
     else
@@ -462,6 +469,8 @@ main() {
     : ${new_mod_versions:=$new_version}
 
     msg
+    # Ready to make the following <live kernel update>
+    # Will be followed by details so we have a ":" at the end
     Shout $"Ready to make the following %s:" "$action_name"
     log_it echo "$blurb"
 
@@ -565,24 +574,26 @@ select_update_rollback_action() {
 
     # FIXME: go through twice to get widths?
     local fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s %s ($date_co%s$nc_co)\n"
-    local live_k  action  what
+    local live_k  action  action_name
 
     if [ $new_cnt -gt 0 ]; then
-        action=update; what=$"Update"
+        action=update; action_name=$"Update"
         while read version fname date; do
             [ ${#version} -eq 0 ] && continue
-            menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"from" "$(vq $version)" "$date")\n"
+            menu="$menu$(printf "$fmt" "$action@$fname" "$action_name" "$fname" $"from" "$(vq $version)" "$date")\n"
         done <<Live_VM
 $(echo "$live_vm")
 Live_VM
     fi
 
-    action="rollback" ; what=$"Rollback"
+    action="rollback" ; action_name=$"Rollback"
     fmt="%s$P_IFS$m_co%s$bold_co %s$m_co %s %s ($date_co%s$nc_co)\n"
      while read version fname date; do
         [ ${#version} -eq 0 ] && continue
         fname=${fname%$KOLD_EXT}
-        menu="$menu$(printf "$fmt" "$action@$fname" "$what" "$fname" $"to" "$(vq $version)" "$date")\n"
+        # Update|Rollback <file> to <new-version> (date)
+        # Translate the "to"
+        menu="$menu$(printf "$fmt" "$action@$fname" "$action_name" "$fname" $"to" "$(vq $version)" "$date")\n"
     done <<Old_VM
 $(echo "$old_vm")
 Old_VM
@@ -747,6 +758,7 @@ do_install() {
     local from=$1  dest=$2 old_ext=${3:-$KOLD_EXT}
     test -f "$from" || fatal "Installation file %s does not exist" "$from"
 
+    # install <filename>
     msg $"install %s" "$(pq $(basename $dest))"
     #msg "install %s --> %s" "$from" "$dest"
 
@@ -791,6 +803,7 @@ do_rollback() {
     test -e "$old_vmlinuz" || fatal $"Could not find old %s file to roll back" "$vmlinuz$K_OLD"
     test -e "$old_initrd"  || fatal $"Could not find old %s file to roll back" "$initrd$K_OLD"
 
+    # Roll back <file-1> to <file-2>
     msg $"Roll back %s to %s" "$(pq $(basename "$old_initrd"))" "$(pq $initrd)"
     cmd mv "$the_initrd" "$bad_initrd"
     cmd mv "$old_initrd" "$the_initrd"
