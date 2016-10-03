@@ -561,7 +561,7 @@ select_live_usb_device() {
 
     fatal_0 $(count_lines "$menu") "usb" $"The system is not a live-usb and no usb drives were detected"
 
-    my_select_quit "$var" $"Please select the system to upgrade" "$menu"
+    my_select_quit "$var" $"Please select the system to update" "$menu"
 }
 
 #------------------------------------------------------------------------------
@@ -612,7 +612,7 @@ Old_VM
 
 #------------------------------------------------------------------------------
 # This is the third menu.  It lets the user select the new kernel that will
-# be used when they do an upgrade.  If there is only one new kernel then that
+# be used when they do an update.  If there is only one new kernel then that
 # kernel is selected and there is no menu.
 #------------------------------------------------------------------------------
 select_new_kernel() {
