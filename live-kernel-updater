@@ -512,11 +512,10 @@ main() {
 
     pause unpack
 
-    if [ "$initrd_only" ]; then
-        prep_template_initrd "$root_dir" "$initrd_dir"
-    else
-        [ "$KEEP_OLD" ] || remove_old_mods $initrd_dir $target_version
-    fi
+    prep_template_initrd "$root_dir" "$initrd_dir" "$initrd_only"
+
+    [ -z "$initrd_only" -a -z "$KEEP_OLD" ] && remove_old_mods $initrd_dir $target_version
+
 
     need copy && copy_modules "$root_dir" "$initrd_dir" $new_mod_versions
 
@@ -681,13 +680,18 @@ unpack_initrd() {
 }
 
 #------------------------------------------------------------------------------
-#
+# If initrd_only then always copy initrd-release, if able and always nuke the
+# modules directory.  Otherwise only copy initrd-release if it is missing.
 #------------------------------------------------------------------------------
 prep_template_initrd() {
-    local from=$1  to=$2
+    local from=$1  to=$2  initrd_only=$3
     local from_release=$from/etc/initrd-release
-    test -e "$from_release" && always_cmd cp "$from_release" "$to/etc"
+    local to_release=$to/etc/initrd-release
 
+    [ "$initrd_only" || ! -e "$to_release" ] && test -e "$from_release" \
+        && always_cmd cp "$from_release" "$to_release"
+
+    [ "$initrd_only" ] || return
     local mod_dir="$to/lib/modules"
     test -e "$mod_dir" && always_cmd rm -r "$mod_dir"
 }
