@@ -65,6 +65,7 @@ Options:
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
      --pause            Wait for user input before existing
+  -m --modules=<list>   Only add listed modules to the existing initrd
   -p --pretend          Don't actually install the new kernel or initrd.gz
   -q --quiet            Print less
   -R --reset-config     Write fresh config file with default options
