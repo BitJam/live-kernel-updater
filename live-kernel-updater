@@ -495,7 +495,7 @@ main() {
 
     if [ "$action" = "rollback" ]; then
         do_rollback  "$full_live_dir" "$target_fname" "$INITRD_NAME"
-        my_done "$action"
+        my_done "$action_name"
     fi
 
     local initrd_dir=$WORK_DIR/initrd
@@ -562,7 +562,7 @@ main() {
     fi
     pause install
 
-    my_done "$action"
+    my_done "$action_name"
 }
 
 #==============================================================================
