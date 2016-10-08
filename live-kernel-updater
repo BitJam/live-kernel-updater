@@ -53,7 +53,7 @@ MIN_LINUXFS_SIZE="100M"
         ERR_FILE="/dev/null"
      CONFIG_FILE="/root/.config/$ME/$ME.conf"
 
-        ALL_CMDS="rollback all unpack copy repack install"
+        ALL_CMDS="rollback all unpack copy-modules repack install"
        ALL_FORCE="all,flock,clear,compress,usb,umount"
        ALL_PAUSE="all,fifo,mount,unpack,copy,repack,clean,exit"
 
@@ -96,6 +96,7 @@ Options:
   -k --kernel=<kernel>  The version (uname -r) of the new kernel
   -K --keep-old         Keep the old module directory in the initrd
      --pause            Wait for user input before existing
+  -m --modules=<list>   Only add listed modules to the existing initrd
   -p --pretend          Don't actually install the new kernel or initrd.gz
   -q --quiet            Print less
   -R --reset-config     Write fresh config file with default options
@@ -129,6 +130,8 @@ eval_argument() {
             -kernel|k)  NEW_KERNEL=$val                 ;;
             -kernel=*)  NEW_KERNEL=$val                 ;;
           -keep-old|K)  KEEP_OLD=true                   ;;
+           -modules|m)  MODS="$MODS${MODS:+,}$val"      ;;
+           -modules=*)  MODS="$MODS${MODS:+,}$val"      ;;
            -pretend|p)  PRETEND_MODE=true ;             ;;
                -pause)  PAUSE="$PAUSE${PAUSE:+,}exit"   ;;
         -pause-list=*)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
@@ -167,12 +170,13 @@ takes_param() {
           -device|d) return 0 ;;
            -force|F) return 0 ;;
           -kernel|k) return 0 ;;
+         -modules|m) return 0 ;;
     esac
     return 1
 }
 
 main() {
-    local SHIFT SHORT_STACK="adDFhiIkKpqRvW"
+    local SHIFT SHORT_STACK="adDFhiIkKmpqRvW"
     local BE_VERBOSE
     local orig_args="$*"
 
@@ -386,7 +390,9 @@ main() {
     fatal_k0 "$live_all" $"No kernels were found in the live boot directory"
 
     if [ $new_cnt -eq 0 ]; then
-        if test -f "$template_initrd" ; then
+        if [ ${#MODS} -gt 0 ]; then
+            :
+        elif test -f "$template_initrd" ; then
             msg
             msg $"No new kernels were found"
             msg $"Can only update the initrd file"
@@ -398,17 +404,24 @@ main() {
     fi
 
     #==============================================================================
-    # The Second Menu
+    # The Second Menu (if needed, no --initrd  and no --modules)
     #==============================================================================
-    local action_target=initrd@$CMD_INITRD
-    [ "$new_initrd" ] \
-        || select_update_rollback_action action_target "$live_vm" "$live_old" "$new_cnt" "$template_initrd"
+    local action_target
+    if [ ${#MODS} -gt 0 ]; then
+        action_target="modules@$MODS"
+    elif [ "$new_initrd" ];then
+        action_target=initrd@$CMD_INITRD
+    else
+        select_update_rollback_action action_target "$live_vm" "$live_old" "$new_cnt" "$template_initrd"
+    fi
 
     local action=${action_target%@*}
     local target_fname=${action_target#*@}
 
     local new_kernel new_version new_fname stat_list action_name blurb
-    local initrd_only new_mod_versions
+    local initrd_only add_modules
+    local current_versions=$(get_kernel_version "$live_both")
+
     #----- Update Action -------------------------------------------------------------------------
     if [ "$action" = "update" ]; then
         action_name=$"live kernel update"
@@ -456,16 +469,21 @@ main() {
     elif [ "$action" = "initrd" ]; then
         action_name=$"live initrd update"
         initrd_only=true
-        new_mod_versions=$(get_kernel_version "$live_both")
         local blurb_fmt="$m_co%s: %s"
         # Update initrd using file <filename> [NOTE: no "%s" here!]
         blurb=$(printf "$blurb_fmt" $"Update initrd using file" "$(pq "$target_fname")")
 
+    elif [ "$action" = "modules" ]; then
+        action_name=$"live modules update"
+        initrd_only=true
+        add_modules=true
+        local blurb_fmt="$m_co%s: %s"
+        # Update initrd using file <filename> [NOTE: no "%s" here!]
+        blurb=$(printf "$blurb_fmt" $"Add initrd modules" "$(pq "$target_fname")")
+
     else
         fatal "Internal error.  Unknown action: %s" "$action"
     fi
-
-    : ${new_mod_versions:=$new_version}
 
     msg
     # Ready to make the following <live kernel update>
@@ -511,12 +529,23 @@ main() {
 
     pause unpack
 
-    prep_template_initrd "$root_dir" "$initrd_dir" "$initrd_only"
+    copy_initrd_release "$root_dir" "$initrd_dir" "$initrd_only"
 
-    [ -z "$initrd_only" -a -z "$KEEP_OLD" ] && remove_old_mods $initrd_dir $target_version
+    if need copy-modules; then
+        if [ ${#MODS} -gt 0 ]; then
+            : # Don't delete any exiting modules
+            local mod_file=$WORK_DIR/module.list
+            echo "$MODS" | sed -r "s/[ ,]+/\n/g" > $mod_file
+            copy_modules "$root_dir" "$initrd_dir" "$current_versions" "$mod_file"
 
-
-    need copy && copy_modules "$root_dir" "$initrd_dir" $new_mod_versions
+        elif [ "$initrd_only" ]; then
+            delete_all_modules $initrd_dir
+            copy_modules "$root_dir" "$initrd_dir" "$current_versions"
+        else
+            [ "$KEEP_OLD" ] || remove_old_mods $initrd_dir $target_version
+            copy_modules "$root_dir" "$initrd_dir" "$new_version"
+        fi
+    fi
 
     pause copy
 
@@ -678,25 +707,24 @@ unpack_initrd() {
     (cd "$dir" && $unpack $args) < "$cpio_file" || fatal "The %s extraction failed" "$unpack"
 }
 
-#------------------------------------------------------------------------------
-# If initrd_only then always copy initrd-release, if able and always nuke the
-# modules directory.  Otherwise only copy initrd-release if it is missing.
-#------------------------------------------------------------------------------
-prep_template_initrd() {
-    local from=$1  to=$2  initrd_only=$3
+copy_initrd_release() {
+    local from=$1  to=$2  always=$3
     local from_release=$from/etc/initrd-release
     local to_release=$to/etc/initrd-release
 
-    [ "$initrd_only" || ! -e "$to_release" ] && test -e "$from_release" \
-        && always_cmd cp "$from_release" "$to_release"
+    [ "$always" -o ! -e "$to_release" ] || return
+    test -e "$from_release"             || return
+    always_cmd cp "$from_release" "$to_release"
+}
 
-    [ "$initrd_only" ] || return
+delete_all_modules() {
+    local to=$1
     local mod_dir="$to/lib/modules"
     test -e "$mod_dir" && always_cmd rm -r "$mod_dir"
 }
 
 #------------------------------------------------------------------------------
-#
+# Remove modules directory for the old kernel
 #------------------------------------------------------------------------------
 remove_old_mods() {
     local root=$1  kernel=$2
@@ -708,18 +736,30 @@ remove_old_mods() {
         warn "Module directory for old kernel '%s' not found" "$kernel"
     fi
 }
+
 #------------------------------------------------------------------------------
-#
+# Copy in modules directory for the new kernel
 #------------------------------------------------------------------------------
 copy_modules() {
-    local from=$1  to=$2  version
-    shift 2
+    local from=$1  to=$2  versions=$3  mod_file=$4
 
-    for version; do
-        always_cmd copy-initrd-modules $COPY_OPTS --from="$from" --to="$to" --kernel="$version" \
-            || fatal "Copy initrd modules failed for %s" "$version"
+    local options="--count --quiet --from=$from --to=$to"
+    [ ${#mod_file} -gt 0 ] && options="$options --verbose"
+
+    local version success
+    for version in $versions; do
+        msg "%s %s %s" "  ->" $"kernel" "$(pq $version)"
+        if always_cmd copy-initrd-modules $options --kernel="$version" $mod_file; then
+            success=true
+            continue
+        fi
+        warn $"Copy initrd modules failed for kernel %s" "$version"
     done
+
+    [ "$success" ] && return
+    fatal $"No modules were copied to the initrd"
 }
+
 #------------------------------------------------------------------------------
 # Pretty much the inverse of unpack_initrd().  We leave everything in the work
 # directory until we do the actual install.
