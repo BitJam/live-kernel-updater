@@ -39,7 +39,6 @@ MIN_LINUXFS_SIZE="100M"
          XZ_OPTS="-c -z --format=lzma"
 
        CPIO_OPTS="-o -H newc --owner root:root --quiet"
-       COPY_OPTS="--quiet --count"
        SHELL_LIB="cli-shell-utils.bash"
     COLOR_SCHEME="high"
 
@@ -968,7 +967,6 @@ MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
          XZ_OPTS="$XZ_OPTS"
 
        CPIO_OPTS="$CPIO_OPTS"
-       COPY_OPTS="$COPY_OPTS"
        SHELL_LIB="$SHELL_LIB"
     COLOR_SCHEME="$COLOR_SCHEME"
 Config_File
