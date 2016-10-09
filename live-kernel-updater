@@ -46,7 +46,6 @@ MIN_LINUXFS_SIZE="100M"
 
         WORK_DIR="/run/$ME"
             FIFO="/run/$ME/fifo"
-       LOCK_FILE="/run/lock/$ME"
     THE_LOG_FILE="/var/log/$ME.log"
     THE_ERR_FILE="/var/log/$ME.errors"
         LOG_FILE="/dev/null"
@@ -209,7 +208,7 @@ main() {
 
     trap clean_up EXIT
 
-    do_flock $LOCK_FILE $ME
+    do_flock
 
     : ${CMDS:=all}
 
@@ -964,9 +963,8 @@ clean_up() {
         umount --recursive "$dir"
         rmdir "$dir"
     done
-    rm -f $LOCK_FILE
+    unflock
 }
-
 
 write_config() {
     local file=${1:-$CONFIG_FILE}
