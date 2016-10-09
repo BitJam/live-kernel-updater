@@ -534,7 +534,7 @@ main() {
     if need copy-modules; then
         if [ ${#MODS} -gt 0 ]; then
             : # Don't delete any exiting modules
-            local mod_file=$WORK_DIR/module.list
+            local mod_file=$WORK_DIR/modules.list
             echo "$MODS" | sed -r "s/[ ,]+/\n/g" > $mod_file
             copy_modules "$root_dir" "$initrd_dir" "$current_versions" "$mod_file"
 
