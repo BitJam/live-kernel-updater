@@ -138,11 +138,11 @@ eval_argument() {
            -verbose|v)  BE_VERBOSE=true                 ;;
 
        # These are read early.  They are not unknown
-     -ignore-config|I)                                   ;;
-      -reset-config|R)                                   ;;
-      -write-config|W)                                   ;;
+     -ignore-config|I)                                  ;;
+      -reset-config|R)                                  ;;
+      -write-config|W)                                  ;;
 
-               *)  fatal "Unknown parameter %s" "-$arg"  ;;
+               *)  fatal "Unknown parameter %s" "-$arg" ;;
     esac
 }
 
