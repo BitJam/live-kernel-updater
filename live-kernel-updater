@@ -311,7 +311,7 @@ main() {
     local live_remaster
     if [ -z "${linuxfs_name%%*$NEW_EXT}" ]; then
         live_remaster=true
-        # Found <linuxfs> file in directory antiX
+        # Found <type> file <file-name> in directory <dir-name>
         msg $"Found %s file %s in directory %s" $(pq live-remaster) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
     else
         msg $"Found %s file %s in directory %s" $(pq linuxfs) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
@@ -907,7 +907,9 @@ my_done() {
     local action=$1
     echo
     if [ "$PRETEND_MODE" ]; then
-        Shout "%s %s %s (%s)." "$ME" "$action" $"done" "$(pqh $"in pretend mode")"
+        # "pretend mode" goes through the steps withoute altering your system
+        local in_pretend=$"in pretend mode"
+        Shout "%s %s %s (%s)." "$ME" "$action" $"done" "$(pqh "$in_pretend")"
     else
         Shout "%s %s %s." "$ME" "$action" $"done"
     fi
