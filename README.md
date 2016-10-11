@@ -50,7 +50,7 @@ Commands:
 
 Options:
   -a --auto             Non-interactive.  Always assume the safe answer
-     --color=<xxx>      Set color scheme to off|low|high
+  -C --color=<xxx>      Set color scheme to off|low|low1|bw|high
   -d --device=<device>  live-usb device to update the kernel on
                         (use "live" to force updating a running live system)
   -F --force=XXXX       Force the options specfied:
