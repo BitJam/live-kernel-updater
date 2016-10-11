@@ -78,7 +78,7 @@ Commands:
 
 Options:
   -a --auto             Non-interactive.  Always assume the safe answer
-     --color=<xxx>      Set color scheme to off|low|high
+  -C --color=<xxx>      Set color scheme to off|low|low1|bw|high
   -d --device=<device>  live-usb device to update the kernel on
                         (use "live" to force updating a running live system)
   -F --force=XXXX       Force the options specfied:
@@ -114,7 +114,7 @@ eval_argument() {
     local arg=$1 val=$2
     case $arg in
               -auto|a)  AUTO_MODE=true                  ;;
-               -color)  COLOR_SCHEME=$val               ;;
+             -color|C)  COLOR_SCHEME=$val               ;;
              -color=*)  COLOR_SCHEME=$val               ;;
             -device|d)  DEVICE=$val                     ;;
             -device=*)  DEVICE=$val                     ;;
@@ -163,7 +163,7 @@ assign_parameter() {
 
 takes_param() {
     case $1 in
-             -color) return 0 ;;
+           -color|C) return 0 ;;
           -device|d) return 0 ;;
            -force|F) return 0 ;;
           -kernel|k) return 0 ;;
@@ -173,7 +173,7 @@ takes_param() {
 }
 
 main() {
-    local SHIFT SHORT_STACK="adDFhiIkKmpqRvW"
+    local SHIFT SHORT_STACK="aCdDFhiIkKmpqRvW"
     local BE_VERBOSE
     local orig_args="$*"
 
