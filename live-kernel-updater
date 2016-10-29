@@ -10,7 +10,6 @@ domain_dir="$MY_DIR/../cli-shell-utils/locale"
 test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
 
 #== BEGIN_CONFIG
-
        MAX_FILES="20"
          LIVE_MP="/live/boot-dev"
         LIVE_DIR="antiX"
@@ -979,6 +978,8 @@ write_config() {
     msg "Writing config file %s" "$(pq "$file")"
 
     cat<<Config_File >"$file"
+$(config_header "$file" $ME)
+
        MAX_FILES="$MAX_FILES"
          LIVE_MP="$LIVE_MP"
         LIVE_DIR="$LIVE_DIR"
@@ -1011,6 +1012,8 @@ MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
        CPIO_OPTS="$CPIO_OPTS"
        SHELL_LIB="$SHELL_LIB"
     COLOR_SCHEME="$COLOR_SCHEME"
+
+$(config_footer)
 Config_File
 
     return 0
