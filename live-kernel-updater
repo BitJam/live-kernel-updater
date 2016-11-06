@@ -10,38 +10,39 @@ domain_dir="$MY_DIR/../cli-shell-utils/locale"
 test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
 
 #== BEGIN_CONFIG
-       MAX_FILES="20"
-         LIVE_MP="/live/boot-dev"
-        LIVE_DIR="antiX"
-        BOOT_DIR="boot"
+         MAX_FILES="20"
+           LIVE_MP="/live/boot-dev"
+          LIVE_DIR="antiX"
+          BOOT_DIR="boot"
 
- VM_VERSION_PROG="vmlinuz-version"
-    LINUXFS_NAME="linuxfs"
-    VMLINUZ_NAME="vmlinuz"
-  VMLINUZ_2_NAME="vmlinuz1"
-     INITRD_NAME="initrd.gz"
- TEMPLATE_INITRD="/usr/lib/iso-template/template-initrd.gz"
+   VM_VERSION_PROG="vmlinuz-version"
+      LINUXFS_NAME="linuxfs"
+      VMLINUZ_NAME="vmlinuz"
+    VMLINUZ_2_NAME="vmlinuz1"
+       INITRD_NAME="initrd.gz"
+   TEMPLATE_INITRD="/usr/lib/iso-template/template-initrd.gz"
+ TEMPLATE_INITRD_2="/usr/lib/iso-template/initrd.gz"
 
-MIN_LINUXFS_SIZE="100M"
+  MIN_LINUXFS_SIZE="100M"
 
-        # for kernel and initrd.gz files
-        KOLD_EXT=".kold"
-        KBAD_EXT=".kbad"
-        IOLD_EXT=".iold"
-        IBAD_EXT=".ibad"
-         MD5_EXT=".md5"
+          # for kernel and initrd.gz files
+          KOLD_EXT=".kold"
+          KBAD_EXT=".kbad"
+          IOLD_EXT=".iold"
+          IBAD_EXT=".ibad"
+           MD5_EXT=".md5"
 
-        # For linuxfs file (right after a remaster)
-         NEW_EXT=".new"
+          # For linuxfs file (right after a remaster)
+           NEW_EXT=".new"
 
-        BZ2_OPTS="-c -9"
-         GZ_OPTS="-c -9"
-         LZ_OPTS="-c -9"
-         XZ_OPTS="-c -z --format=lzma"
+          BZ2_OPTS="-c -9"
+           GZ_OPTS="-c -9"
+           LZ_OPTS="-c -9"
+           XZ_OPTS="-c -z --format=lzma"
 
-       CPIO_OPTS="-o -H newc --owner root:root --quiet"
-       SHELL_LIB="cli-shell-utils.bash"
-    COLOR_SCHEME="high"
+         CPIO_OPTS="-o -H newc --owner root:root --quiet"
+         SHELL_LIB="cli-shell-utils.bash"
+      COLOR_SCHEME="high"
 
 #== END_CONFIG
 
@@ -89,7 +90,10 @@ Options:
                                usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
   -h --help             Show this usage
-  -i --initrd           Only update the initrd using file: $TEMPLATE_INITRD
+  -i --initrd           Only update the initrd using the file:
+                            $TEMPLATE_INITRD
+                        If that file is not found, use:
+                            $TEMPLATE_INITRD_2
      --initrd=<file>    Only update the initrd using file <file>
                         leading / then treated as full path to alternate initrd
   -I --ignore-config    Ignore the configuration file
@@ -188,6 +192,9 @@ main() {
     EXIT_NUM=100
 
     read_reset_config_file "$CONFIG_FILE"
+
+    # Needs to be before we read cmdline
+    test -f "$TEMPLATE_INITRD" || TEMPLATE_INITRD=$TEMPLATE_INITRD_2
 
     read_all_cmdline_mingled "$@"
     set_colors $COLOR_SCHEME
