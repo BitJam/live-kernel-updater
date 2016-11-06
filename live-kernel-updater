@@ -357,6 +357,8 @@ main() {
 
     local boot_new=$(find_kernel_version "$live_versions" "$boot_all" -v)
     local new_cnt=$(count_lines "$boot_new")
+    local live_old_cnt=$(count_lines "$live_old")
+    local action_cnt=$((new_cnt + live_old_cnt))
 
     # [a table of what was found will follow]
     msg $"Found:"
@@ -389,7 +391,7 @@ main() {
     fatal_k0 "$boot_all" $"No kernels were found in the boot directory"
     fatal_k0 "$live_all" $"No kernels were found in the live boot directory"
 
-    if [ $new_cnt -eq 0 ]; then
+    if [ $action_cnt -eq 0 ]; then
         if [ ${#MODS} -gt 0 ]; then
             :
         elif test -f "$template_initrd" ; then
