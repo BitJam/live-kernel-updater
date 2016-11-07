@@ -58,7 +58,10 @@ Options:
                                usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
   -h --help             Show this usage
-  -i --initrd           Only update the initrd using file: /usr/lib/iso-template/template-initrd.gz
+  -i --initrd           Only update the initrd using the file:
+                            /usr/lib/iso-template/template-initrd.gz
+                        If that file is not found, use:
+                            /usr/lib/iso-template/initrd.gz
      --initrd=<file>    Only update the initrd using file <file>
                         leading / then treated as full path to alternate initrd
   -I --ignore-config    Ignore the configuration file
