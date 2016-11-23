@@ -1,5 +1,14 @@
 #!/bin/bash
 
+#==============================================================================
+# live-kernel-updater
+# A robust program to change kernels on antiX/MX live systems
+#
+# (C) 2016 BitJam for antiX <antiX@operamail.com>
+# License: GPLv3 or later
+#==============================================================================
+
+
         ME=${0##*/}
     MY_DIR=$(dirname "$(readlink -f $0)")
 MY_LIB_DIR=$(readlink -f "$MY_DIR/../cli-shell-utils")
