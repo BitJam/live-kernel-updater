@@ -8,6 +8,8 @@
 # License: GPLv3 or later
 #==============================================================================
 
+      VERSION="0.90.01"
+ VERSION_DATE="Tue Nov 29 17:52:01 MST 2016"
 
         ME=${0##*/}
     MY_DIR=$(dirname "$(readlink -f $0)")
@@ -113,7 +115,8 @@ Options:
   -p --pretend          Don't actually install the new kernel or initrd.gz
   -q --quiet            Print less
   -R --reset-config     Write fresh config file with default options
-  -v --verbose          Print more, show commands when run
+  -v --version          Show version information
+  -V --verbose          Print more, show commands when run
   -W --write-config     Write/update config file preserving current options
 
 Notes:
@@ -163,10 +166,11 @@ eval_argument() {
 eval_early_argument() {
     case $1 in
       -ignore-config|I) IGNORE_CONFIG=true    ;;
-       -reset-config|R)  RESET_CONFIG=true    ;;
-       -write-config|W)  WRITE_CONFIG=true    ;;
-                -pause)  PAUSE="$PAUSE${PAUSE:+,}exit" ;;
+       -reset-config|R) RESET_CONFIG=true     ;;
+       -write-config|W) WRITE_CONFIG=true     ;;
+                -pause) PAUSE="$PAUSE${PAUSE:+,}exit" ;;
                -help|h) usage                 ;;
+            -version|v) show_version          ;;
     esac
 }
 
@@ -189,7 +193,7 @@ takes_param() {
 }
 
 main() {
-    local SHIFT SHORT_STACK="aCdDFhiIkKmpqRvW"
+    local SHIFT SHORT_STACK="aCdDFhiIkKmpqRvVW"
     local BE_VERBOSE
     local orig_args="$*"
 
@@ -966,12 +970,21 @@ start_log() {
 ---------------------------------------------------------------------
 $0
         started: $(date)
+        version: $VERSION ($VERSION_DATE)
     comand line: $args
       found lib: $FOUND_LIB
      TEXTDOMAIN: $TEXTDOMAIN
   TEXTDOMAINDIR: $TEXTDOMAINDIR
 
 Start_Log
+}
+
+#------------------------------------------------------------------------------
+# Show version information and then exit
+#------------------------------------------------------------------------------
+show_version() {
+    printf "%s version %s (%s)\n" "$ME" "$VERSION" "$VERSION_DATE"
+    exit 0
 }
 
 #------------------------------------------------------------------------------
