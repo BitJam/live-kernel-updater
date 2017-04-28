@@ -4,12 +4,12 @@
 # live-kernel-updater
 # A robust program to change kernels on antiX/MX live systems
 #
-# (C) 2016 Paul Banham <antiX@operamail.com>
+# (C) 2016 -- 2017 Paul Banham <antiX@operamail.com>
 # License: GPLv3 or later
 #==============================================================================
 
-      VERSION="1.00.00"
- VERSION_DATE="Thu Dec  1 16:11:51 MST 2016"
+      VERSION="2.00.01"
+ VERSION_DATE="Thu Apr 27 18:28:56 MDT 2017"
 
         ME=${0##*/}
     MY_DIR=$(dirname "$(readlink -f $0)")
