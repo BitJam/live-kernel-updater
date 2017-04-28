@@ -53,6 +53,10 @@ test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
 
          CPIO_OPTS="-o -H newc --owner root:root --quiet"
          SHELL_LIB="cli-shell-utils.bash"
+
+         LUKS_NAME="live-kernel-updater"
+       CRYPT_FNAME="crypt"
+
       COLOR_SCHEME="high"
 
 #== END_CONFIG
@@ -243,16 +247,24 @@ main() {
 
     USB_DIR=$WORK_DIR/usb
     SQFS_DIR=$WORK_DIR/linux
+    BIOS_DIR=$WORK_DIR/bios
 
     local root_dir=$SQFS_DIR
 
     mkdir -p $WORK_DIR || fatal 120 "Could not make a work directory under /run"
     mount -t tmpfs tmpfs $WORK_DIR || fatal 121 "Could not mount tmpfs at %s" $WORK_DIR
 
-    local we_are_live live_dev
+    local we_are_live  live_dev  bios_uuid  bios_dev
     if its_alive_usb; then
         we_are_live=true
+
         # FIXME: should use initrd.out to get the uuid, etc
+        # This reads initrd.out file
+        read_initrd_config
+
+        bios_uuid=$INITRD_BIOS_UUID
+        [ -n "$bios_uuid" ] && bios_dev=$(blkid -U "$bios_uuid")
+
         live_dev=$(get_live_dev)
         warn_z "$live_dev" $"The live media is not mounted"
         msg $"Current running kernel is %s" "$(pq $(uname -r))"
@@ -261,7 +273,7 @@ main() {
     #==============================================================================
     # The First Menu
     #==============================================================================
-    [ ${#DEVICE} -eq 0 ] && select_live_usb_device DEVICE "$live_dev"
+    [ ${#DEVICE} -eq 0 ] && select_live_usb_device DEVICE "$live_dev" "$bios_dev"
 
     # Are we going to update a running live system or an plugged in live-usb?
     local usb_dev live_mp
@@ -271,6 +283,18 @@ main() {
         fatal_z "$we_are_live" $"This is not a live-usb system"
         live_mp=$LIVE_MP
         msg $"Will use running live system"
+
+        IS_ENCRYPTED=INITRD_ENCRYPTED
+
+        if encrypted ; then
+            mount_if_needed "$bios_dev" $BIOS_DIR
+            shout "Encryption detected"
+            msg "Made sure %s was mounted at %s" "$(pq $bios_dev)" "$(pq $BIOS_DIR)"
+
+            # Avoid updating the initrd.  Can fix later by borrowing code from lum to
+            # add crypt programs to the initrd ***** sigh *****
+            template_initrd=
+        fi
 
     #----- LIVE-USB -----------------------------------------------------------
     else
@@ -302,6 +326,34 @@ main() {
         my_mount $usb_dev $USB_DIR
         msg $"Will use live-usb device %s" "$(pq $usb_dev)"
         live_mp=$USB_DIR
+
+        local crypt_file=$live_mp/$LIVE_DIR/$CRYPT_FNAME
+        if test -e $crypt_file; then
+            shout "Encrypted live-usb detected"
+            local main_uuid=$(cat $crypt_file 2>/dev/null)
+
+            my_mkdir $BIOS_DIR
+            always_cmd mount --move $live_mp $BIOS_DIR || fatal "Could not move mount to %s" $(basename $BIOS_DIR)
+
+            fatal_z "$main_uuid" "Could not find uuid of encrypted partition"
+
+            local main_dev=$(blkid -U "$main_uuid")
+            echo "main uuid: $main_uuid  main dev: $main_dev" >> $LOG_FILE
+
+            fatal_z "$main_dev" "Could not find encrypted partition with uuid %s" "$boot_uuid"
+
+            shout "When asked, please enter the password for this encrypted live-usb"
+            LUKS_DEV=/dev/mapper/$LUKS_NAME
+
+            always_cmd cryptsetup open --type=luks $main_dev $LUKS_NAME \
+                || fatal "Was unable to open the encrypted partition"
+
+            always_cmd mount $LUKS_DEV $live_mp || fatal "Was unable to mount the encrypted device"
+
+            IS_ENCRYPTED=true
+            template_initrd=
+        fi
+
     fi
 
     is_mountpoint "$live_mp" || fatal "Expected '%s' to be a mountpoint" "$live_mp"
@@ -310,6 +362,7 @@ main() {
 
     # local full_live_dir=$live_mp/${LIVE_DIR#/}
     local full_live_dir rel_live_dir
+
     find_live_boot_dir rel_live_dir "$live_mp" "$LINUXFS_NAME" \
         || fatal $"No '%s' file found in any directory in '%s'" "$LINUXFS_NAME" "$live_mp"
 
@@ -345,6 +398,11 @@ main() {
     local full_boot_dir="$root_dir/${BOOT_DIR#/}"
 
     pause mount
+
+    # NOTE: *after* mounting the linuxfs file we switch to the BIOS_DIR directory (sneaky)
+    # if we are working on an encrypted live-usb
+    encrypted && live_mp=$BIOS_DIR
+    full_live_dir=$live_mp/${rel_live_dir#/}
 
     local full_initrd targ_initrd="$full_live_dir/$INITRD_NAME"
     if [ "$new_initrd" ]; then
@@ -600,8 +658,8 @@ main() {
 # plugged in usb or removable device.
 #------------------------------------------------------------------------------
 select_live_usb_device() {
-    local var=$1  live_dev=$2
-    local menu=$(cli_drive_menu "$live_dev")
+    local var=$1  live_dev=$2  bios_dev=$3
+    local menu=$(cli_drive_menu "$live_dev" "$bios_dev")
 
     if [ "$live_dev" ]; then
         local title=$(printf $"The current Live System on %s" "$(pq $live_dev)")
@@ -991,14 +1049,10 @@ show_version() {
 # Trapped on exit.  Umount (order is vital!) remove the work_dir and remove
 # the lock file.
 #------------------------------------------------------------------------------
+
 clean_up() {
-    local dir
-    for dir in $SQFS_DIR $USB_DIR $WORK_DIR; do
-        [ ${#dir} -eq 0 ] && continue
-        is_mountpoint "$dir" || continue
-        umount --recursive "$dir"
-        rmdir "$dir"
-    done
+    mp_cleanup $SQFS_DIR $USB_DIR $BIOS_DIR $WORK_DIR
+    luks_close $LUKS_NAME
     unflock
 }
 
@@ -1042,6 +1096,10 @@ MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
 
        CPIO_OPTS="$CPIO_OPTS"
        SHELL_LIB="$SHELL_LIB"
+
+       LUKS_NAME="$LUKS_NAME"
+     CRYPT_FNAME="$CRYPT_FNAME"
+
     COLOR_SCHEME="$COLOR_SCHEME"
 
 $(config_footer)
@@ -1051,7 +1109,12 @@ Config_File
 }
 
 #------------------------------------------------------------------------------
-#
+# Returns true if we are working on a live encrypted live-usb
+#------------------------------------------------------------------------------
+encrypted() { [ "$IS_ENCRYPTED" ] ; return $? ;}
+
+#------------------------------------------------------------------------------
+# Load the lib either from a neighboring repo or from the standard location.
 #------------------------------------------------------------------------------
 load_lib() {
     local file=$1  path=$2
