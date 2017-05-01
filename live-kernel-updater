@@ -120,7 +120,8 @@ Options:
   -q --quiet            Print less
   -R --reset-config     Write fresh config file with default options
   -v --version          Show version information
-  -V --verbose          Print more, show commands when run
+  -V --verbose          Print more, show output of commands
+  -VV --very-verbose    Also show the commands
   -W --write-config     Write/update config file preserving current options
 
 Notes:
@@ -156,7 +157,9 @@ eval_argument() {
                -pause)  PAUSE="$PAUSE${PAUSE:+,}exit"   ;;
         -pause-list=*)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
              -quiet|q)  QUIET=true                      ;;
-           -verbose|v)  BE_VERBOSE=true                 ;;
+           -verbose|V)  VERBOSITY=$((VERBOSITY + 1))    ;;
+        -very-verbose)  VERBOSITY=$((VERBOSITY + 2))    ;;
+
 
        # These are read early.  They are not unknown
      -ignore-config|I)                                  ;;
@@ -198,7 +201,7 @@ takes_param() {
 
 main() {
     local SHIFT SHORT_STACK="aCdDFhiIkKmpqRvVW"
-    local BE_VERBOSE
+    local BE_VERBOSE VERY_VERBOSE VERBOSITY=0
     local orig_args="$*"
 
     # Let non-root users get usage.  Need to get --ignore-config early.
@@ -218,6 +221,12 @@ main() {
     check_cmds  CMDS  "$ALL_CMDS"
     check_force FORCE "$ALL_FORCE"
     check_pause PAUSE "$ALL_PAUSE"
+
+    case $VERBOSITY in
+        0) ;;
+        1) BE_VERBOSE=true                     ;;
+        *) BE_VERBOSE=true ; VERY_VERBOSE=true ;;
+    esac
 
     local new_initrd
     if [ ${#CMD_INITRD} -gt 0 ]; then
