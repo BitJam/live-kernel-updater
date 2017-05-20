@@ -251,8 +251,6 @@ main() {
     start_log "$orig_args"
     type -t find_man_page &>/dev/null && find_man_page
 
-    #[ "$FIFO_MODE" -a "$AUTO_MODE" ] && fatal "Cannot select both %s and %s" "--fifo" "--auto"
-
     shout_pretend
 
     USB_DIR=$WORK_DIR/usb
