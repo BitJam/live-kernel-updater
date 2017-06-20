@@ -1071,7 +1071,7 @@ write_config() {
     msg "Writing config file %s" "$(pq "$file")"
 
     cat<<Config_File >"$file"
-$(config_header "$file" $ME)
+$(config_header "$file" "$ME" "$VERSION" "$VERSION_DATE")
 
        MAX_FILES="$MAX_FILES"
          LIVE_MP="$LIVE_MP"
