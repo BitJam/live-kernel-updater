@@ -836,8 +836,8 @@ copy_modules() {
 
     local version success
     for version in $versions; do
-        msg "%s %s %s" "  ->" $"kernel" "$(pq $version)"
-        if always_cmd copy-initrd-modules $options --kernel="$version" $mod_file; then
+        msg "  -> %s %s" $"kernel" "$(pq $version)"
+        if always_cmd copy-initrd-modules $options --encrypt --kernel="$version" $mod_file; then
             success=true
             continue
         fi
