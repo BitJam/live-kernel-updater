@@ -58,7 +58,7 @@ test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
        CRYPT_FNAME="crypt"
 
       COLOR_SCHEME="high"
-
+   GRAPHICAL_MENUS="true"
 #== END_CONFIG
 
         WORK_DIR="/run/$ME"
@@ -104,6 +104,7 @@ Options:
                              flock:  ignore missing flock program
                                usb:  Allow non-usb devices (dangerous!)
                              clear:  remove previous initrd directory
+  -G --graphic-ui       Use the new graphics user interface (default)
   -h --help             Show this usage
   -i --initrd           Only update the initrd using the file:
                             $TEMPLATE_INITRD
@@ -116,6 +117,7 @@ Options:
   -K --keep-old         Keep the old module directory in the initrd
      --pause            Wait for user input before existing
   -m --modules=<list>   Only add listed modules to the existing initrd
+  -N --numeric-ui       Use the legacy numerical user interface
   -p --pretend          Don't actually install the new kernel or initrd.gz
   -q --quiet            Print less
   -R --reset-config     Write fresh config file with default options
@@ -145,6 +147,7 @@ eval_argument() {
              -force|F)  FORCE="$FORCE${FORCE:+,}$val"   ;;
              -force=*)  FORCE="$FORCE${FORCE:+,}$val"   ;;
 #               -fifo)  FIFO_MODE=true                  ;;
+       --graphic-ui|G)  GRAPHICAL_MENUS=true            ;;
               -help|h)  usage                           ;;
             -initrd|i)  CMD_INITRD=$TEMPLATE_INITRD     ;;
             -initrd=*)  CMD_INITRD=${arg#*=}            ;;
@@ -153,6 +156,7 @@ eval_argument() {
           -keep-old|K)  KEEP_OLD=true                   ;;
            -modules|m)  MODS="$MODS${MODS:+,}$val"      ;;
            -modules=*)  MODS="$MODS${MODS:+,}$val"      ;;
+       --numeric-ui|N)  GRAPHICAL_MENUS=                ;;
            -pretend|p)  PRETEND_MODE=true ;             ;;
                -pause)  PAUSE="$PAUSE${PAUSE:+,}exit"   ;;
         -pause-list=*)  PAUSE="$PAUSE${PAUSE:+,}$val"   ;;
@@ -200,7 +204,7 @@ takes_param() {
 }
 
 main() {
-    local SHIFT SHORT_STACK="aCdDFhiIkKmpqRvVW"
+    local SHIFT SHORT_STACK="aCdDFGhiIkKmNpqRvVW"
     local BE_VERBOSE VERY_VERBOSE VERBOSITY=0
     local orig_args="$*"
 
