@@ -251,7 +251,8 @@ main() {
     : ${CMDS:=all}
 
     # starting <program name>
-    msg $"Starting %s" "$ME"
+    shout_title $"Starting %s" "$ME"
+
     start_log "$orig_args"
     type -t find_man_page &>/dev/null && find_man_page
 
@@ -579,8 +580,7 @@ main() {
 
     msg
     # Ready to make the following <live kernel update>
-    # Will be followed by details so we have a ":" at the end
-    Shout $"Ready to make the following %s:" "$action_name"
+    shout_subtitle $"Ready to make the following %s" "$action_name"
     log_it echo "$blurb"
 
     YES_no_pretend || my_exit
