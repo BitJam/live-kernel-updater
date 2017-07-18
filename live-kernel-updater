@@ -1063,7 +1063,9 @@ show_version() {
 #------------------------------------------------------------------------------
 
 clean_up() {
+    lib_clean_up
     mp_cleanup $SQFS_DIR $USB_DIR $BIOS_DIR $WORK_DIR
+    test -d $WORK_DIR && rmdir $WORK_DIR
     luks_close $LUKS_NAME
     unflock
 }
