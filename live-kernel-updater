@@ -77,6 +77,9 @@ test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
             PATH="$MY_LIB_DIR/bin:$LIB_DIR/bin:$PATH"
 
 
+#------------------------------------------------------------------------------
+# Show usage and exit
+#------------------------------------------------------------------------------
 usage() {
     local ret=${1:-0}
 
@@ -136,6 +139,10 @@ Usage
     exit $ret
 }
 
+#------------------------------------------------------------------------------
+# Callback routine to evaluate arguments after the root user check.  We also
+# need to include the early args to avoid unknown argument errors.
+#------------------------------------------------------------------------------
 eval_argument() {
     local arg=$1 val=$2
     case $arg in
@@ -174,6 +181,9 @@ eval_argument() {
     esac
 }
 
+#------------------------------------------------------------------------------
+# Callback routine to evalute some command line args before the root user test.
+#------------------------------------------------------------------------------
 eval_early_argument() {
     case $1 in
       -ignore-config|I) IGNORE_CONFIG=true    ;;
@@ -185,6 +195,9 @@ eval_early_argument() {
     esac
 }
 
+#------------------------------------------------------------------------------
+# Callback routine for command line arguments that don't start with "-"
+#------------------------------------------------------------------------------
 assign_parameter() {
     local cnt=$1 param=$2
    case $cnt in
@@ -192,6 +205,9 @@ assign_parameter() {
     esac
 }
 
+#------------------------------------------------------------------------------
+# Callback routine to see if an argument requires a value to follow it.
+#------------------------------------------------------------------------------
 takes_param() {
     case $1 in
            -color|C) return 0 ;;
@@ -203,6 +219,9 @@ takes_param() {
     return 1
 }
 
+#------------------------------------------------------------------------------
+# The main routine.  Called from the very bottom of this script.
+#------------------------------------------------------------------------------
 main() {
     local SHIFT SHORT_STACK="aCdDFGhiIkKmNpqRvVW"
     local BE_VERBOSE VERY_VERBOSE VERBOSITY=0
@@ -799,6 +818,9 @@ unpack_initrd() {
     (cd "$dir" && $unpack $args) < "$cpio_file" || fatal "The %s extraction failed" "$unpack"
 }
 
+#------------------------------------------------------------------------------
+# Copy the initrd-release file (if needed)
+#------------------------------------------------------------------------------
 copy_initrd_release() {
     local from=$1  to=$2  always=$3
     local from_release=$from/etc/initrd-release
@@ -809,6 +831,9 @@ copy_initrd_release() {
     always_cmd cp "$from_release" "$to_release"
 }
 
+#------------------------------------------------------------------------------
+# Remove all kernel modules from the initrd
+#------------------------------------------------------------------------------
 delete_all_modules() {
     local to=$1
     local mod_dir="$to/lib/modules"
@@ -996,7 +1021,7 @@ msg_kernel() {
 }
 
 #------------------------------------------------------------------------------
-#
+# Say a few extra things to the user before we exit
 #------------------------------------------------------------------------------
 my_done() {
     local action=$1
@@ -1053,7 +1078,6 @@ Start_Log
 # Trapped on exit.  Umount (order is vital!) remove the work_dir and remove
 # the lock file.
 #------------------------------------------------------------------------------
-
 clean_up() {
     lib_clean_up
     mp_cleanup $SQFS_DIR $USB_DIR $BIOS_DIR $WORK_DIR
@@ -1062,6 +1086,9 @@ clean_up() {
     unflock
 }
 
+#------------------------------------------------------------------------------
+# Write a configuration file based on the current settings
+#------------------------------------------------------------------------------
 write_config() {
     local file=${1:-$CONFIG_FILE}
     local dir=$(dirname "$file")
