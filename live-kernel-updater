@@ -227,6 +227,9 @@ main() {
     local BE_VERBOSE VERY_VERBOSE VERBOSITY=0
     local orig_args="$*"
 
+    # Bashism: put the original arguments into an array to deal w/ spaces
+    declare -a ORIG_ARGS=("$@")
+
     # Let non-root users get usage.  Need to get --ignore-config early.
     read_early_params "$@"
 
@@ -501,14 +504,37 @@ main() {
     fatal_k0 "$boot_all" $"No kernels were found in the boot directory"
     fatal_k0 "$live_all" $"No kernels were found in the live boot directory"
 
-    if [ $action_cnt -eq 0 ]; then
-        if [ ${#MODS} -gt 0 ]; then
-            :
+    # Let's see if they should do a remaster first
+    local boot_all_cnt=$(count_lines "$boot_all")
+    local live_boot_cnt=0
+    # Only count /boot kernels if we are working on a live system
+    update_live && live_boot_cnt=$(count_kernels /boot)
+
+    # They should almost always remaster if they've installed a kernel
+    if [ $live_boot_cnt -gt $boot_all_cnt ]; then
+        shout $"You should do a remaster before doing a kernel update"
+        do_remaster "${ORIG_ARGS[@]}"
+    fi
+
+    if [ $action_cnt -eq 0 -a ${#MODS} -eq 0 ]; then
+
+        # Maybe they just need to do a remaster first
+        local boot_all_cnt=$(count_lines "$boot_all")
+        local live_boot_cnt=0
+        # Only count /boot kernels if we are working on a live system
+        [ "$DEVICE" = "live" ] && live_boot_cnt=$(count_lines "$($VM_VERSION_PROG -nsr /boot)")
+
+        # Aha, they just need to remaster first
+        if [ $live_boot_cnt -gt $boot_all_cnt ]; then
+            shout_subtitle $"You MUST do a remaster before doing a kernel update"
+            do_remaster "${ORIG_ARGS[@]}"
+            exit
+
         elif test -f "$template_initrd" ; then
-            msg
-            msg $"No new kernels were found"
-            msg $"Can only update the initrd file"
-            msg $"You must install a kernel and then remaster before doing a kernel update"
+            shout
+            shout $"No new kernels were found"
+            shout $"Can only update the initrd file"
+            shout $"You must install a kernel and then remaster before doing a kernel update"
         else
             error $"No new kernels were found and there's no template initrd file"
             fatal $"You must install a kernel and then remaster before doing a kernel update"
@@ -1034,6 +1060,33 @@ my_done() {
         Shout "%s %s %s." "$ME" "$action" $"done"
     fi
     my_exit 0
+}
+
+
+#------------------------------------------------------------------------------
+# Convenience routine
+#------------------------------------------------------------------------------
+update_live() { [ "$DEVICE" = 'live' ] ; return $? ; }
+
+#------------------------------------------------------------------------------
+# Count the number of kernels in a directory
+#------------------------------------------------------------------------------
+count_kernels() {
+    local dir=$1
+    count_lines "$($VM_VERSION_PROG -nsr /boot)"
+}
+
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+do_remaster() {
+    YES_no $"Would you like to do a remaster now?" || return
+    live-remaster --cli
+    shout $"Ready to restart %s" "$ME"
+    press_enter
+    clean_up
+    exec $0 "$@"
 }
 
 #------------------------------------------------------------------------------
