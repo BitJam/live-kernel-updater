@@ -293,7 +293,6 @@ main() {
     if its_alive_usb; then
         we_are_live=true
 
-        # FIXME: should use initrd.out to get the uuid, etc
         # This reads initrd.out file
         read_initrd_config
 
