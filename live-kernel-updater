@@ -319,7 +319,7 @@ main() {
         live_mp=$LIVE_MP
         msg $"Will use running live system"
 
-        IS_ENCRYPTED=INITRD_ENCRYPTED
+        IS_ENCRYPTED=$INITRD_ENCRYPTED
 
         if encrypted ; then
             mount_if_needed "$bios_dev" $BIOS_DIR
