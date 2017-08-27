@@ -274,6 +274,7 @@ main() {
 
     # starting <program name>
     shout_title $"Starting %s" "$ME"
+    set_window_title "$ME"
 
     start_log "$orig_args"
     type -t find_man_page &>/dev/null && find_man_page
