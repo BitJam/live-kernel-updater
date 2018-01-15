@@ -743,9 +743,9 @@ select_update_rollback_action() {
 
     local menu=$(make_update_menu "$@")
 
-    echo "$menu"
-     local cnt=$(count_lines "$menu")
-     [ $cnt -lt 1 ] && fatal $"No update or rollback actions are available"
+    #echo "$menu"
+    local cnt=$(count_lines "$menu")
+    [ $cnt -lt 1 ] && fatal $"No update or rollback actions are available"
 
     my_select $var $"Please select an action to perform" "$menu"
 }
