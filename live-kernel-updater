@@ -69,7 +69,7 @@ test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
         ERR_FILE="/dev/null"
      CONFIG_FILE="/root/.config/$ME/$ME.conf"
 
-        ALL_CMDS="rollback all unpack copy-modules repack install"
+        ALL_CMDS="rollback all unpack copy-modules repack install defrag"
        ALL_FORCE="all,flock,clear,compress,usb,umount"
        ALL_PAUSE="all,fifo,mount,unpack,copy,repack,clean,exit"
 
@@ -701,6 +701,8 @@ main() {
         else
             do_install "$tmp_initrd_file" "$targ_initrd"
             do_install "$full_boot_dir/$new_fname" "$full_live_dir/$target_fname"
+
+            need defrag && do_defrag "$full_live_dir"
         fi
     fi
     pause install
