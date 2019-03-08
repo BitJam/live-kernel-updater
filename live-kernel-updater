@@ -46,12 +46,6 @@ test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
           # For linuxfs file (right after a remaster)
            NEW_EXT=".new"
 
-          BZ2_OPTS="-c -9"
-           GZ_OPTS="-c -9"
-           LZ_OPTS="-c -9"
-           XZ_OPTS="-c -z --format=lzma"
-
-         CPIO_OPTS="-o -H newc --owner root:root --quiet"
          SHELL_LIB="cli-shell-utils.bash"
 
          LUKS_NAME="live-kernel-updater"
@@ -69,7 +63,7 @@ test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
         ERR_FILE="/dev/null"
      CONFIG_FILE="/root/.config/$ME/$ME.conf"
 
-        ALL_CMDS="rollback all unpack copy-modules repack install defrag"
+        ALL_CMDS="rollback all unpack copy-modules copy-programs repack install defrag"
        ALL_FORCE="all,flock,clear,compress,usb,umount"
        ALL_PAUSE="all,fifo,mount,unpack,copy,repack,clean,exit"
 
@@ -170,7 +164,6 @@ eval_argument() {
              -quiet|q)  QUIET=true                      ;;
            -verbose|V)  VERBOSITY=$((VERBOSITY + 1))    ;;
         -very-verbose)  VERBOSITY=$((VERBOSITY + 2))    ;;
-
 
        # These are read early.  They are not unknown
      -ignore-config|I)                                  ;;
@@ -666,8 +659,7 @@ main() {
                 "Use --force=clear to always delete it"   \
                 "Will not over-write an existing initrd directory."
         fi
-
-        unpack_initrd "$full_initrd" "$initrd_dir"  "$compression_file"
+        unpack-initrd --from "$full_initrd" --dir "$initrd_dir"  --quiet
     fi
 
     pause unpack
@@ -692,7 +684,7 @@ main() {
 
     pause copy
 
-    need repack && repack_initrd "$initrd_dir" "$tmp_initrd_file"  "$compression_file"
+    need repack && unpack-initrd --dir "$initrd_dir" --from "$tmp_initrd_file" --repack  --quiet
     pause repack
 
     if need install; then
@@ -829,39 +821,6 @@ select_new_kernel() {
 #==============================================================================
 # The Routines that do the "real" work.
 #==============================================================================
-#------------------------------------------------------------------------------
-# Unpacks the initrd file.  Does it in two steps. Records the compression
-# type.  The framework is here to deal with multiple compression types and
-# archive types but it has not been tested!
-#------------------------------------------------------------------------------
-unpack_initrd() {
-    local file=$1  dir=$2  compression_file=$3
-    local compression=$(file -b "$file" | cut -d" " -f1)
-
-    local compress args
-    case $compression in
-         gzip) compress="gzip"   ; args="-cd"  ;;
-        bzip2) compress="bzip2"  ; args="-cd"  ;;
-         lzip) compress="lzip"   ; args="-cd"  ;;
-           XZ) compress="xz"     ; args="-cd"  ;;
-            *) fatal "Don't know how to decompress a '%s' file" "$compression" ;;
-    esac
-    echo "$compress" > $compression_file
-
-    need_prog $compress
-    my_mkdir "$dir"
-
-    local cpio_file="$dir.in"
-    $compress $args "$file" > "$cpio_file" || fatal "The decompression program '%s' failed" "$decomp"
-
-    local unpack archive_type=$(file -b "$cpio_file")
-    case $archive_type in
-        *" cpio archive"*) unpack="cpio" ; args="-idum --quiet" ;;
-         *" tar archive"*) unpack="tar"  ; args="-x"            ;;
-                       *) fatal "unknown initrd archive type '%s'" "$archive_type"
-    esac
-    (cd "$dir" && $unpack $args) < "$cpio_file" || fatal "The %s extraction failed" "$unpack"
-}
 
 #------------------------------------------------------------------------------
 # Copy the initrd-release file (if needed)
@@ -923,36 +882,14 @@ copy_modules() {
 }
 
 #------------------------------------------------------------------------------
-# Pretty much the inverse of unpack_initrd().  We leave everything in the work
-# directory until we do the actual install.
+# Copy programs and libs from linuxfs into the initrd directory
+# Should only be needed when we use a template initrd.gz
 #------------------------------------------------------------------------------
-repack_initrd() {
-    local dir=$1  file=$2  compression_file=$3
-    local compress
-    read compress 2>/dev/null < $compression_file
-    : ${compress:=gzip}
-
-    local args
-    case $compress in
-         bzip2) args="$BZ2_OPTS" ;;
-          gzip) args="$GZ_OPTS"  ;;
-          lzip) args="$LZ_OPTS"  ;;
-            xz) args="$XZ_OPTS"  ;;
-             *) yes_NO_fatal "compress" \
-               "Do you want to continue on using gzip compression?" \
-               "Use %s to skip this question in the future" \
-               "Unknown compression format: %s" "$compression"
-                compress="gzip" ; args="$GZIP_OPTS"  ;;
-    esac
-
-    need_prog $compress
-
-    local cpio_file="$dir.out"
-    (cd "$dir" && find . | cpio $CPIO_OPTS) > $cpio_file \
-        || fatal "Could not create a cpio archive"
-
-    msg $"Compressing ..."
-    $compress $args < "$cpio_file" > "$file" || fatal "Compression (%s) failed" $compress
+copy_programs() {
+    local from=$1  to=$2  prog=${3:-copy-initrd-programs}
+    need_prog $prog
+    cmd $prog --from="$from" --to="$to" --encrypt --clean
+    cmd $prog --from="$from" --to="$to"
 }
 
 #------------------------------------------------------------------------------
@@ -1168,12 +1105,6 @@ MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
         # For linuxfs file (right after a remaster)
          NEW_EXT="$NEW_EXT"
 
-        BZ2_OPTS="$BZ2_OPTS"
-         GZ_OPTS="$GZ_OPTS"
-         LZ_OPTS="$LZ_OPTS"
-         XZ_OPTS="$XZ_OPTS"
-
-       CPIO_OPTS="$CPIO_OPTS"
        SHELL_LIB="$SHELL_LIB"
 
        LUKS_NAME="$LUKS_NAME"
