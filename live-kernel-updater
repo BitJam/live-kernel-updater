@@ -1012,9 +1012,9 @@ my_done() {
     if [ "$PRETEND_MODE" ]; then
         # "pretend mode" goes through the steps withoute altering your system
         local in_pretend=$"in pretend mode"
-        Shout "%s %s %s (%s)." "$ME" "$action" $"done" "$(pqh "$in_pretend")"
+        Shout "%s %s %s (%s)." "$ME" "$(pqb $action)" $"done" "$(pqb "$in_pretend")"
     else
-        Shout "%s %s %s." "$ME" "$action" $"done"
+        Shout "%s %s %s." "$ME" "$(pqb $action)" $"done"
     fi
     my_exit 0
 }
