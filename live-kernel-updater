@@ -675,7 +675,8 @@ main() {
 
         elif [ "$initrd_only" ]; then
             delete_all_modules $initrd_dir
-            copy_modules "$root_dir" "$initrd_dir" "$current_versions"
+            copy_modules  "$root_dir"  "$initrd_dir"  "$current_versions"
+            need copy-programs && copy_programs "$root_dir"  "$initrd_dir"
         else
             [ "$KEEP_OLD" ] || remove_old_mods $initrd_dir $target_version
             copy_modules "$root_dir" "$initrd_dir" "$new_version"
