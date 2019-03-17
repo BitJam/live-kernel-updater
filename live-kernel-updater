@@ -414,16 +414,20 @@ main() {
     fatal_z "$linuxfs_name" $"Could not find '%s' or '%s' on the live-usb" \
         $(pqh "$LINUXFS_NAME$NEW_EXT") $(pqh "$LINUXFS_NAME")
 
+    local linuxfs_base=$(basename "$linuxfs_name")
     local live_remaster
     if [ -z "${linuxfs_name%%*$NEW_EXT}" ]; then
         live_remaster=true
         # Found <type> file <file-name> in directory <dir-name>
-        msg $"Found %s file %s in directory %s" $(pq live-remaster) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
+        msg $"Found %s file %s in directory %s" "$(pq live-remaster)" "$(pq $linuxfs_base)" "$(pq $rel_live_dir)"
     else
-        msg $"Found %s file %s in directory %s" $(pq linuxfs) $(pq $(basename $linuxfs_name)) "$(pq $rel_live_dir)"
+        msg $"Found %s file %s in directory %s" "$(pq linuxfs)" "$(pq $linuxfs_base)" "$(pq $rel_live_dir)"
     fi
 
-    # Fix me?
+    local sq_compress=$(unsquashfs -s "$linuxfs_name" | awk '/^Compression/ {print $2}')
+    # Squashfs file <filename> uses <type> compression"
+    msg $"Squashfs file %s uses %s compression" "$(pq $linuxfs_base)" "$(pq $sq_compress)"
+
     my_mount "$linuxfs_name" "$root_dir" -t squashfs -o loop,ro
     local full_boot_dir="$root_dir/${BOOT_DIR#/}"
 
@@ -453,6 +457,9 @@ main() {
     get_all_kernel live_all "$full_live_dir"                          # all in live dir
     get_all_kernel boot_all "$full_boot_dir"                          # all in boot dir
     #get_all_kernel boot_mod "$full_boot_dir" --mod-dir="$root_dir"   # boot dir with module dir
+
+    # Filter out kernels that can't handle the squashfs compression
+    filter_on_compression boot_all "$full_boot_dir" "$sq_compress"
 
     local live_vm=$(find_kernel_fname "$both_vm" "$live_all")         # live with default vmlinuz names
     local vm_cnt=$(count_lines "$live_vm")
@@ -1018,6 +1025,34 @@ my_done() {
     my_exit 0
 }
 
+#------------------------------------------------------------------------------
+# Rule out kernels that cannot handle the squashfs compression method
+#------------------------------------------------------------------------------
+filter_on_compression() {
+    local var=$1  dir=$2  compress=$3
+    case $compress in gzip) return ;; esac
+    eval "local val=\$$var"
+    local version changed
+    for version in $(get_kernel_version "$val"); do
+        local config=$dir/config-$version
+        local short_config=${config#$SQFS_DIR}
+        if ! test -e "$config"; then
+            warn "Could not find file %s" "$(pqh $short_config)"
+            continue
+        fi
+        if ! test -r "$config"; then
+            warn "Could not read file %s" "$(pqh $short_config)"
+            continue
+        fi
+        if ! grep -iq "^CONFIG_SQUASHFS_$compress=y" "$config"; then
+            warn "Kernel %s cannot handle %s squashfs compression" "$(pqh $version)" "$(pqh $compress)"
+            val=$(echo "$val" | grep -v "^$version$K_IFS")
+            changed=true
+        fi
+    done
+    [ "$changed" ] || return
+    eval $var=\$val
+}
 
 #------------------------------------------------------------------------------
 # Convenience routine
