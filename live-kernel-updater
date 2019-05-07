@@ -447,7 +447,7 @@ main() {
         full_initrd=$targ_initrd
     fi
 
-    test -e "$full_initrd" || fatal $"Could not find initrd file: %s" "$full_initrd"
+    test -e "$full_initrd" || fatal $"Could not find initrd file %s" "$full_initrd"
 
     # default live kernels: vmlinuz and vmlinuz1
     local both_vm=$VMLINUZ_NAME
