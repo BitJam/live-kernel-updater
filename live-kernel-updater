@@ -31,7 +31,7 @@ test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
       VMLINUZ_NAME="vmlinuz"
     VMLINUZ_2_NAME="vmlinuz1"
        INITRD_NAME="initrd.gz"
-   TEMPLATE_INITRD="/usr/lib/iso-template/template-initrd.gz"
+ TEMPLATE_INITRD_1="/usr/lib/iso-template/template-initrd.gz"
  TEMPLATE_INITRD_2="/usr/lib/iso-template/initrd.gz"
 
   MIN_LINUXFS_SIZE="100M"
@@ -61,7 +61,7 @@ test -d "$domain_dir" && export TEXTDOMAINDIR=$domain_dir
     THE_ERR_FILE="/var/log/$ME.error"
         LOG_FILE="/dev/null"
         ERR_FILE="/dev/null"
-     CONFIG_FILE="/root/.config/$ME/$ME.conf"
+     CONFIG_FILE="/etc/$ME/$ME.conf"
 
         ALL_CMDS="rollback all unpack copy-modules copy-programs repack install defrag"
        ALL_FORCE="all,flock,clear,compress,usb,umount"
@@ -104,7 +104,7 @@ Options:
   -G --graphic-ui       Use the new graphics user interface (default)
   -h --help             Show this usage
   -i --initrd           Only update the initrd using the file:
-                            $TEMPLATE_INITRD
+                            $TEMPLATE_INITRD_1
                         If that file is not found, use:
                             $TEMPLATE_INITRD_2
      --initrd=<file>    Only update the initrd using file <file>
@@ -232,6 +232,7 @@ main() {
     read_reset_config_file "$CONFIG_FILE"
 
     # Needs to be before we read cmdline
+    TEMPLATE_INITRD=$TEMPLATE_INITRD_1
     test -f "$TEMPLATE_INITRD" || TEMPLATE_INITRD=$TEMPLATE_INITRD_2
 
     read_all_cmdline_mingled "$@"
@@ -1116,37 +1117,38 @@ write_config() {
     cat<<Config_File >"$file"
 $(config_header "$file" "$ME" "$VERSION" "$VERSION_DATE")
 
-       MAX_FILES="$MAX_FILES"
-         LIVE_MP="$LIVE_MP"
-        LIVE_DIR="$LIVE_DIR"
-        BOOT_DIR="$BOOT_DIR"
+#          MAX_FILES="$MAX_FILES"
+#            LIVE_MP="$LIVE_MP"
+#           LIVE_DIR="$LIVE_DIR"
+#           BOOT_DIR="$BOOT_DIR"
 
- VM_VERSION_PROG="$VM_VERSION_PROG"
-    LINUXFS_NAME="$LINUXFS_NAME"
-    VMLINUZ_NAME="$VMLINUZ_NAME"
-  VMLINUZ_2_NAME="$VMLINUZ_2_NAME"
-     INITRD_NAME="$INITRD_NAME"
- TEMPLATE_INITRD="$TEMPLATE_INITRD"
+#    VM_VERSION_PROG="$VM_VERSION_PROG"
+#       LINUXFS_NAME="$LINUXFS_NAME"
+#       VMLINUZ_NAME="$VMLINUZ_NAME"
+#     VMLINUZ_2_NAME="$VMLINUZ_2_NAME"
+#        INITRD_NAME="$INITRD_NAME"
+#  TEMPLATE_INITRD_1="$TEMPLATE_INITRD_1"
+#  TEMPLATE_INITRD_2="$TEMPLATE_INITRD_2"
 
-MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
+#   MIN_LINUXFS_SIZE="$MIN_LINUXFS_SIZE"
 
-        # for kernel and initrd.gz files
-        KOLD_EXT="$KOLD_EXT"
-        KBAD_EXT="$KBAD_EXT"
-        IOLD_EXT="$IOLD_EXT"
-        IBAD_EXT="$IBAD_EXT"
-         MD5_EXT="$MD5_EXT"
+          # for kernel and initrd.gz files
+#           KOLD_EXT="$KOLD_EXT"
+#           KBAD_EXT="$KBAD_EXT"
+#           IOLD_EXT="$IOLD_EXT"
+#           IBAD_EXT="$IBAD_EXT"
+#            MD5_EXT="$MD5_EXT"
 
-        # For linuxfs file (right after a remaster)
-         NEW_EXT="$NEW_EXT"
+          # For linuxfs file (right after a remaster)
+#            NEW_EXT="$NEW_EXT"
 
-       SHELL_LIB="$SHELL_LIB"
+#          SHELL_LIB="$SHELL_LIB"
 
-       LUKS_NAME="$LUKS_NAME"
-     CRYPT_FNAME="$CRYPT_FNAME"
+#          LUKS_NAME="$LUKS_NAME"
+#        CRYPT_FNAME="$CRYPT_FNAME"
 
-    COLOR_SCHEME="$COLOR_SCHEME"
-
+#       COLOR_SCHEME="$COLOR_SCHEME"
+#    GRAPHICAL_MENUS="$GRAPHICAL_MENUS"
 $(config_footer)
 Config_File
 
