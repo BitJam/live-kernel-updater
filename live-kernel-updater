@@ -249,7 +249,7 @@ main() {
 
     local new_initrd
     if [ ${#CMD_INITRD} -gt 0 ]; then
-        test -f "$CMD_INITRD" || fatal "The initrd file '%s' was not found" "$CMD_INITRD"
+        test -f "$CMD_INITRD" || fatal "The initrd file %s was not found" "$CMD_INITRD"
         new_initrd=true
     fi
 
@@ -335,7 +335,7 @@ main() {
         fatal_z "$usb_dev" $"Could not find device %s" "$DEVICE"
 
         force usb || is_usb_or_removable $usb_dev \
-            || fatal usb $"The device '%s' does not appear to be a usb device" "$usb_dev"
+            || fatal usb $"The device %s does not appear to be a usb device" "$usb_dev"
 
         local dev_type=$(lsblk -no type --nodeps $usb_dev)
 
@@ -387,7 +387,7 @@ main() {
 
     fi
 
-    is_mountpoint "$live_mp" || fatal "Expected '%s' to be a mountpoint" "$live_mp"
+    is_mountpoint "$live_mp" || fatal "Expected %s to be a mountpoint" "$live_mp"
 
     show_distro_version "$live_mp"
 
@@ -395,7 +395,7 @@ main() {
     local full_live_dir rel_live_dir
 
     find_live_boot_dir rel_live_dir "$live_mp" "$LINUXFS_NAME" \
-        || fatal $"No '%s' file found in any directory in '%s'" "$LINUXFS_NAME" "$live_mp"
+        || fatal $"No %s file found in any directory in %s" "$LINUXFS_NAME" "$live_mp"
 
     local full_live_dir=$live_mp/${rel_live_dir#/}
 
@@ -412,7 +412,7 @@ main() {
     done
 
     # Could not find '<linuxfs.new>' or '<linuxfs>' on the live-usb
-    fatal_z "$linuxfs_name" $"Could not find '%s' or '%s' on the live-usb" \
+    fatal_z "$linuxfs_name" $"Could not find %s or %s on the live-usb" \
         $(pqh "$LINUXFS_NAME$NEW_EXT") $(pqh "$LINUXFS_NAME")
 
     local linuxfs_base=$(basename "$linuxfs_name")
@@ -580,7 +580,7 @@ main() {
         new_version=$(get_kernel_version "$new_kernel")
         new_date=$(get_kernel_date "$new_kernel")
         test -d $root_dir/lib/modules/$new_version \
-            || fatal "Missing modules directory for kernel '%s'" "$new_version"
+            || fatal "Missing modules directory for kernel %s" "$new_version"
 
         # Current kernel and New/Old kernel specs
         blurb=$(kernel_stats \
@@ -600,7 +600,7 @@ main() {
         new_date=$(get_kernel_date "$new_kernel")
 
         test -d $root_dir/lib/modules/$new_version \
-            || fatal "Missing modules directory for kernel '%s'" "$new_fname"
+            || fatal "Missing modules directory for kernel %s" "$new_fname"
 
         blurb=$(kernel_stats \
             $"Current" "$target_version" "$target_date" "$target_fname"          "$target_fname$KBAD_EXT" \
@@ -862,7 +862,7 @@ remove_old_mods() {
     if test -d "$dir"; then
         always_cmd rm -r "$dir"
     else
-        warn "Module directory for old kernel '%s' not found" "$kernel"
+        warn "Module directory for old kernel %s not found" "$kernel"
     fi
 }
 
@@ -1180,7 +1180,7 @@ load_lib() {
         return 0
     done
 
-    printf "Could not find library '%s' on path '%s'\n" "$file" "$path" >&2
+    printf "Could not find library %s on path %s\n" "$file" "$path" >&2
     printf "This is a fatal error\n" >&2
     exit 17
 }
