@@ -337,12 +337,12 @@ main() {
         force usb || is_usb_or_removable $usb_dev \
             || fatal usb $"The device %s does not appear to be a usb device" "$usb_dev"
 
-        local dev_type=$(lsblk -no type --nodeps $usb_dev)
+        local dev_type=$(lsblk -no TYPE --nodeps $usb_dev)
 
         # Allow user to specify disk device instead of partition
         if [ "$dev_type" = "disk"  ]; then
             local part_dev=$(get_partition $usb_dev 1)
-            dev_type=$(lsblk -no type --nodeps $part_dev)
+            dev_type=$(lsblk -no TYPE --nodeps $part_dev)
             if [ "$dev_type" = "part" ]; then
                 usb_dev=$part_dev
             else
